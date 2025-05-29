@@ -11,7 +11,7 @@ const AboutSection = () => {
                 </h2>
                 <div className="w-24 h-1 bg-green-600 rounded mb-8"></div>
                 <p className="text-xl text-gray-600 leading-relaxed">
-                  AgriChain uses technology to create an equitable ecosystem where farmers can list their produce transparently and buyers can trust what they purchase.
+                  AgroSmart uses technology to create an equitable ecosystem where farmers can list their produce transparently and buyers can trust what they purchase.
                 </p>
               </div>
               

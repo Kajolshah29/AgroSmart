@@ -1,47 +1,65 @@
 const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
-    product: {
+    buyerId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'Product',
+        ref: 'User',
         required: true
     },
-    buyer: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Buyer',
-        required: true
-    },
-    quantity: {
-        type: Number,
-        required: true,
-        min: 1
-    },
+    items: [{
+        productId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'Product',
+            required: true
+        },
+        quantity: {
+            type: Number,
+            required: true,
+            min: 1
+        },
+        price: {
+            type: Number,
+            required: true
+        },
+        farmerId: {
+            type: mongoose.Schema.Types.ObjectId,
+            ref: 'User',
+            required: true
+        }
+    }],
     totalAmount: {
         type: Number,
         required: true
     },
-    deliveryAddress: {
+    paymentMethod: {
         type: String,
+        enum: ['upi', 'card', 'cod'],
         required: true
+    },
+    paymentDetails: {
+        type: mongoose.Schema.Types.Mixed,
+        required: function() {
+            return this.paymentMethod === 'card';
+        }
     },
     status: {
         type: String,
-        enum: ['pending', 'accepted', 'rejected', 'completed', 'cancelled'],
+        enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
         default: 'pending'
     },
     paymentStatus: {
         type: String,
-        enum: ['pending', 'completed', 'failed'],
+        enum: ['pending', 'processing', 'completed', 'failed'],
         default: 'pending'
     },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    },
-    updatedAt: {
-        type: Date,
-        default: Date.now
+    deliveryAddress: {
+        street: String,
+        city: String,
+        state: String,
+        pincode: String
     }
+}, {
+    timestamps: true
 });
 
 // Update the updatedAt timestamp before saving

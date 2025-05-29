@@ -7,7 +7,7 @@ const Mission = () => {
             Our Mission
           </h2>
           <p className="text-xl text-white/90 leading-relaxed font-light">
-            AgriChain is reimagining agriculture through technology — enabling fair trade, 
+            AgroSmart is reimagining agriculture through technology — enabling fair trade, 
             secure payments, and full transparency from field to fork.
           </p>
           

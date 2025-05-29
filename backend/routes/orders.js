@@ -3,117 +3,123 @@ const router = express.Router();
 const Order = require('../models/Order');
 const { auth } = require('../middleware/auth');
 
-// Get all orders for a farmer
-router.get('/farmer', auth, async (req, res) => {
-    try {
-        const orders = await Order.find({ farmer: req.user.userId })
-            .populate('buyer', 'name email')
-            .populate('product', 'name price images')
-            .sort({ createdAt: -1 });
-
-        res.json({
-            success: true,
-            orders
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error fetching orders',
-            error: error.message
-        });
-    }
-});
-
-// Get all orders for a buyer
-router.get('/buyer', auth, async (req, res) => {
-    try {
-        const orders = await Order.find({ buyer: req.user.userId })
-            .populate('farmer', 'name email')
-            .populate('product', 'name price images')
-            .sort({ createdAt: -1 });
-
-        res.json({
-            success: true,
-            orders
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error fetching orders',
-            error: error.message
-        });
-    }
-});
-
-// Create a new order (buyer request)
+// Create a new order
 router.post('/', auth, async (req, res) => {
-    try {
-        const { productId, quantity, deliveryAddress } = req.body;
+  try {
+    const { items, totalAmount, paymentMethod, paymentDetails } = req.body;
+    const buyerId = req.user.id;
 
-        const order = new Order({
-            product: productId,
-            buyer: req.user.userId,
-            quantity,
-            deliveryAddress,
-            status: 'pending'
-        });
+    // Create order
+    const order = new Order({
+      buyerId,
+      items,
+      totalAmount,
+      paymentMethod,
+      paymentDetails,
+      status: 'pending',
+      paymentStatus: paymentMethod === 'cod' ? 'pending' : 'processing'
+    });
 
-        await order.save();
+    await order.save();
 
-        // Populate the order with product and buyer details
-        await order.populate('product', 'name price images farmer');
-        await order.populate('buyer', 'name email');
-
-        res.status(201).json({
-            success: true,
-            message: 'Order created successfully',
-            order
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error creating order',
-            error: error.message
-        });
+    // Handle payment based on method
+    if (paymentMethod === 'cod') {
+      // For COD, just mark as pending
+      order.paymentStatus = 'pending';
+    } else if (paymentMethod === 'upi') {
+      // For UPI, mark as processing
+      order.paymentStatus = 'processing';
+      // Here you would typically integrate with a UPI payment gateway
+    } else if (paymentMethod === 'card') {
+      // For card payments, validate and process
+      if (!paymentDetails || !paymentDetails.cardNumber || !paymentDetails.cvv) {
+        return res.status(400).json({ message: 'Invalid card details' });
+      }
+      // Here you would typically integrate with a payment gateway
+      order.paymentStatus = 'processing';
     }
+
+    await order.save();
+
+    res.status(201).json({
+      message: 'Order created successfully',
+      order
+    });
+  } catch (error) {
+    console.error('Error creating order:', error);
+    res.status(500).json({ message: 'Error creating order' });
+  }
 });
 
-// Update order status (farmer accepting/rejecting orders)
-router.put('/:orderId/status', auth, async (req, res) => {
-    try {
-        const { status } = req.body;
-        const order = await Order.findById(req.params.orderId);
+// Get buyer's orders
+router.get('/buyer', auth, async (req, res) => {
+  try {
+    const orders = await Order.find({ buyerId: req.user.id })
+      .sort({ createdAt: -1 });
+    res.json({ orders });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching orders' });
+  }
+});
 
-        if (!order) {
-            return res.status(404).json({
-                success: false,
-                message: 'Order not found'
-            });
-        }
+// Get farmer's orders
+router.get('/farmer', auth, async (req, res) => {
+  try {
+    const orders = await Order.find({ 'items.farmerId': req.user.id })
+      .sort({ createdAt: -1 });
+    res.json({ orders });
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching orders' });
+  }
+});
 
-        // Verify that the user is the farmer who owns the product
-        if (order.product.farmer.toString() !== req.user.userId) {
-            return res.status(403).json({
-                success: false,
-                message: 'Not authorized to update this order'
-            });
-        }
+// Update order status
+router.patch('/:orderId/status', auth, async (req, res) => {
+  try {
+    const { status } = req.body;
+    const order = await Order.findById(req.params.orderId);
 
-        order.status = status;
-        await order.save();
-
-        res.json({
-            success: true,
-            message: 'Order status updated successfully',
-            order
-        });
-    } catch (error) {
-        res.status(500).json({
-            success: false,
-            message: 'Error updating order status',
-            error: error.message
-        });
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
     }
+
+    // Verify if user is authorized to update this order
+    if (order.buyerId.toString() !== req.user.id && 
+        !order.items.some(item => item.farmerId.toString() === req.user.id)) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    order.status = status;
+    await order.save();
+
+    res.json({ message: 'Order status updated', order });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating order status' });
+  }
+});
+
+// Update payment status
+router.patch('/:orderId/payment', auth, async (req, res) => {
+  try {
+    const { paymentStatus } = req.body;
+    const order = await Order.findById(req.params.orderId);
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // Only buyer can update payment status
+    if (order.buyerId.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    order.paymentStatus = paymentStatus;
+    await order.save();
+
+    res.json({ message: 'Payment status updated', order });
+  } catch (error) {
+    res.status(500).json({ message: 'Error updating payment status' });
+  }
 });
 
 module.exports = router; 

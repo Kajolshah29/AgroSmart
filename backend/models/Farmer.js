@@ -4,20 +4,27 @@ const bcrypt = require('bcryptjs');
 const farmerSchema = new mongoose.Schema({
     name: {
         type: String,
-        required: true,
+        required: [true, 'Name is required'],
         trim: true
     },
     email: {
         type: String,
-        required: true,
+        required: [true, 'Email is required'],
         unique: true,
         trim: true,
-        lowercase: true
+        lowercase: true,
+        match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email']
     },
     password: {
         type: String,
-        required: true,
-        minlength: 6
+        required: [true, 'Password is required'],
+        minlength: [8, 'Password must be at least 8 characters long'],
+        validate: {
+            validator: function(v) {
+                return /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/.test(v);
+            },
+            message: 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'
+        }
     },
     phone: {
         type: String,
@@ -29,11 +36,27 @@ const farmerSchema = new mongoose.Schema({
         trim: true,
         required: true
     },
+    state: {
+        type: String,
+        required: true
+    },
+    district: {
+        type: String,
+        required: true
+    },
+    taluka: {
+        type: String,
+        required: true
+    },
     farmDetails: {
         farmName: String,
         farmSize: String,
         farmLocation: String,
         crops: [String]
+    },
+    location: {
+        lat: Number,
+        lng: Number
     },
     createdAt: {
         type: Date,
@@ -50,13 +73,17 @@ farmerSchema.pre('save', async function(next) {
         this.password = await bcrypt.hash(this.password, salt);
         next();
     } catch (error) {
-        next(error);
+        next(new Error('Error hashing password: ' + error.message));
     }
 });
 
 // Method to compare password
 farmerSchema.methods.comparePassword = async function(candidatePassword) {
-    return bcrypt.compare(candidatePassword, this.password);
+    try {
+        return await bcrypt.compare(candidatePassword, this.password);
+    } catch (error) {
+        throw new Error('Error comparing passwords: ' + error.message);
+    }
 };
 
 const Farmer = mongoose.model('Farmer', farmerSchema);

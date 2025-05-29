@@ -1,14 +1,14 @@
-# AgriChain
+# AgroSmart
 
 ## Motivation
 
-Farmers often struggle with unfair pricing, lack of market access, and delayed payments. Middlemen reduce farmers’ earnings, and buyers can’t easily verify produce quality or origin. Traditional systems lack trust and transparency.
+Farmers often struggle with unfair pricing, lack of market access, and delayed payments. Middlemen reduce farmers' earnings, and buyers can't easily verify produce quality or origin. Traditional systems lack trust and transparency.
 
 Blockchain can fix this by enabling direct, transparent trades between farmers and buyers. AI can make the platform simple and smart, especially for rural users.
 
 ## About
 
-AgriChain is a blockchain-based marketplace connecting farmers directly with buyers. It removes middlemen, ensures transparent transactions, and offers secure payments via smart contracts. AI tools help with pricing and demand predictions, making trading fair and easy.
+AgroSmart is a blockchain-based marketplace connecting farmers directly with buyers. It removes middlemen, ensures transparent transactions, and offers secure payments via smart contracts. AI tools help with pricing and demand predictions, making trading fair and easy.
 
 ## Features
 

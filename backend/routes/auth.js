@@ -3,11 +3,13 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const Farmer = require('../models/Farmer');
 const Buyer = require('../models/Buyer');
+const bcrypt = require('bcrypt');
+const axios = require('axios');
 
 // Register Farmer
 router.post('/register/farmer', async (req, res) => {
     try {
-        const { name, email, password, phone, address, farmDetails } = req.body;
+        const { name, email, password, phone, address, state, district, taluka, farmDetails } = req.body;
         
         // Check if farmer already exists
         const existingFarmer = await Farmer.findOne({ email });
@@ -25,8 +27,27 @@ router.post('/register/farmer', async (req, res) => {
             password,
             phone,
             address,
+            state,
+            district,
+            taluka,
             farmDetails
         });
+
+        // Get location from address using OpenStreetMap Nominatim
+        try {
+            const response = await axios.get(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+                    `${address}, ${taluka}, ${district}, ${state}, India`
+                )}&limit=1`
+            );
+
+            if (response.data && response.data[0]) {
+                const { lat, lon } = response.data[0];
+                farmer.location = { lat: parseFloat(lat), lng: parseFloat(lon) };
+            }
+        } catch (error) {
+            console.error('Error getting location:', error);
+        }
 
         await farmer.save();
 
@@ -64,7 +85,7 @@ router.post('/register/farmer', async (req, res) => {
 // Register Buyer
 router.post('/register/buyer', async (req, res) => {
     try {
-        const { name, email, password, phone, address, businessDetails } = req.body;
+        const { name, email, password, phone, address, state, district, taluka, businessDetails } = req.body;
         
         // Check if buyer already exists
         const existingBuyer = await Buyer.findOne({ email });
@@ -82,8 +103,27 @@ router.post('/register/buyer', async (req, res) => {
             password,
             phone,
             address,
+            state,
+            district,
+            taluka,
             businessDetails
         });
+
+        // Get location from address using OpenStreetMap Nominatim
+        try {
+            const response = await axios.get(
+                `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
+                    `${address}, ${taluka}, ${district}, ${state}, India`
+                )}&limit=1`
+            );
+
+            if (response.data && response.data[0]) {
+                const { lat, lon } = response.data[0];
+                buyer.location = { lat: parseFloat(lat), lng: parseFloat(lon) };
+            }
+        } catch (error) {
+            console.error('Error getting location:', error);
+        }
 
         await buyer.save();
 
@@ -122,7 +162,16 @@ router.post('/register/buyer', async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         const { email, password, role } = req.body;
-        console.log('Login attempt:', { email, role }); // Log login attempt
+        console.log('Login attempt:', { email, role });
+
+        // Validate password format
+        const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        if (!passwordRegex.test(password)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 8 characters long and contain uppercase, lowercase, number and special character'
+            });
+        }
 
         let user;
         let userRole;
@@ -136,23 +185,21 @@ router.post('/login', async (req, res) => {
             userRole = 'buyer';
         }
 
-        console.log('User found:', user ? 'Yes' : 'No'); // Log if user was found
-
         if (!user) {
             return res.status(401).json({ 
                 success: false,
-                message: 'Invalid credentials' 
+                message: 'No account found with this email' 
             });
         }
 
         // Check password
         const isMatch = await user.comparePassword(password);
-        console.log('Password match:', isMatch); // Log password match result
+        console.log('Password match:', isMatch);
 
         if (!isMatch) {
             return res.status(401).json({ 
                 success: false,
-                message: 'Invalid credentials' 
+                message: 'Incorrect password' 
             });
         }
 
@@ -178,7 +225,7 @@ router.post('/login', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Login error:', error); // Log any errors
+        console.error('Login error:', error);
         res.status(500).json({ 
             success: false,
             message: 'Error logging in', 

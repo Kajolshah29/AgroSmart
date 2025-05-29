@@ -7,7 +7,7 @@ import UserRoles from "../components/UserRoles";
 import ContactSection from "../components/ContactSection";
 import FinalCTA from "../components/FinalCTA";
 import Footer from "../components/Footer";
-
+import FAQ from "../components/FAQ";
 
 export default function Home() {
   return (
@@ -16,10 +16,11 @@ export default function Home() {
       <Hero></Hero>
       <Features></Features>
       <AboutSection />
-      <MarketplacePreview />
+      {/* <MarketplacePreview /> */}
       <UserRoles />
       {/* <AIChatbot /> */}
       <ContactSection />
+      <FAQ />
       <FinalCTA />
       <Footer />
     </div>

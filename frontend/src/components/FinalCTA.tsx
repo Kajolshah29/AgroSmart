@@ -16,7 +16,7 @@ const FinalCTA = () => {
             Ready to trade transparently?
           </h2>
           <p className="text-xl text-white/90 mb-12 max-w-2xl mx-auto">
-            Join thousands of farmers and buyers already using AgriChain to create a more transparent, fair, and sustainable agricultural marketplace.
+            Join thousands of farmers and buyers already using AgroSmart to create a more transparent, fair, and sustainable agricultural marketplace.
           </p>
           
           <div className="flex flex-col sm:flex-row gap-6 justify-center items-center mb-16">
@@ -25,25 +25,31 @@ const FinalCTA = () => {
               onClick={scrollToHero}
               className="bg-white text-green-600 hover:bg-gray-100 px-12 py-6 text-xl rounded-full font-semibold shadow-2xl hover:scale-105 transition-all duration-300"
             >
-              Get Started with AgriChain
+              Get Started with AgroSmart
             </Button>
           </div>
           
-          <div className="grid md:grid-cols-3 gap-8 text-white/80">
+          <div className="grid md:grid-cols-3 gap-8 max-w-3xl mx-auto">
             <div className="text-center">
-              <div className="text-3xl mb-3">🔒</div>
-              <h4 className="font-semibold mb-2">Secure Transactions</h4>
-              <p className="text-sm">Blockchain-powered security for all trades</p>
+              <div className="w-16 h-16 mx-auto bg-white rounded-full flex items-center justify-center mb-4">
+                <span className="text-2xl">🛡️</span>
+              </div>
+              <h4 className="font-medium text-[#ffffff] mb-2">UPI Secure</h4>
+              <p className="text-sm text-[#ffff]">Safe & instant payments</p>
             </div>
             <div className="text-center">
-              <div className="text-3xl mb-3">📱</div>
-              <h4 className="font-semibold mb-2">Mobile Ready</h4>
-              <p className="text-sm">Access your dashboard anywhere, anytime</p>
+              <div className="w-16 h-16 mx-auto bg-white rounded-full flex items-center justify-center mb-4">
+                <span className="text-2xl">🗣️</span>
+              </div>
+              <h4 className="font-medium text-[#ffff] mb-2">Multilingual</h4>
+              <p className="text-sm text-[#ffff]">Support in your language</p>
             </div>
             <div className="text-center">
-              <div className="text-3xl mb-3">🌍</div>
-              <h4 className="font-semibold mb-2">Global Reach</h4>
-              <p className="text-sm">Connect with farmers and buyers worldwide</p>
+              <div className="w-16 h-16 mx-auto bg-white rounded-full flex items-center justify-center mb-4">
+                <span className="text-2xl">📈</span>
+              </div>
+              <h4 className="font-medium text-[#ffff] mb-2">Real-time Tracking</h4>
+              <p className="text-sm text-[#ffff]">Monitor everything live</p>
             </div>
           </div>
         </div>

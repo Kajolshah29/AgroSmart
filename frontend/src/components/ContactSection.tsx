@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
 import { Label } from "./ui/label";
+import FAQ from "./FAQ";
 
 const ContactSection = () => {
   const [formData, setFormData] = useState({
@@ -30,96 +31,109 @@ const ContactSection = () => {
   return (
     <section id="contact" className="py-24 bg-white">
       <div className="container mx-auto px-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-5xl font-bold text-gray-900 mb-4">Get in Touch</h2>
-            <div className="w-24 h-1 bg-green-600 mx-auto rounded mb-4"></div>
-            <p className="text-xl text-gray-600">
-              Have questions? We'd love to hear from you.
-            </p>
+        <div className="text-center mb-16">
+          <h2 className="text-5xl font-bold text-gray-900 mb-6">
+            Get in Touch
+          </h2>
+          <div className="w-24 h-1 bg-green-600 mx-auto rounded mb-6"></div>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Have questions about AgroSmart? We're here to help.
+          </p>
+        </div>
+
+        <div className="grid lg:grid-cols-2 gap-8 max-w-5xl mx-auto">
+          {/* Contact Form */}
+          <div className="bg-white rounded-xl shadow-lg p-6 flex justify-center">
+            <form onSubmit={handleSubmit} className="space-y-4 w-full max-w-sm">
+              <div>
+                <Label htmlFor="name" className="text-sm">Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  placeholder="Your name"
+                  className="mt-1 h-8 text-sm"
+                />
+              </div>
+              <div>
+                <Label htmlFor="email" className="text-sm">Email</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  placeholder="your@email.com"
+                  className="mt-1 h-8 text-sm"
+                />
+              </div>
+              <div>
+                <Label htmlFor="message" className="text-sm">Message</Label>
+                <textarea
+                  id="message"
+                  name="message"
+                  value={formData.message}
+                  onChange={handleChange}
+                  required
+                  placeholder="Your message"
+                  className="w-full mt-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent text-sm"
+                  rows={2}
+                />
+              </div>
+              <Button
+                type="submit"
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-1.5 text-sm mt-2"
+              >
+                Send Message
+              </Button>
+            </form>
           </div>
 
-          <div className="grid lg:grid-cols-2 gap-16">
-            {/* Contact Form */}
-            <div>
+          {/* Contact Info */}
+          <div className="space-y-6">
+            <div className="bg-gradient-to-br from-green-50 to-amber-50/30 rounded-xl p-5">
               <h3 className="text-2xl font-semibold text-gray-900 mb-6">
-                Send us a message
+                Contact Information
               </h3>
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div>
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    name="name"
-                    value={formData.name}
-                    onChange={handleChange}
-                    className="mt-2"
-                    required
-                  />
+              <div className="space-y-4">
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">📍</span>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">Address</h4>
+                    <p className="text-gray-600">
+                      123 Agriculture Street<br />
+                      Farming District, 12345
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    className="mt-2"
-                    required
-                  />
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">📧</span>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">Email</h4>
+                    <p className="text-gray-600">support@agrosmart.com</p>
+                  </div>
                 </div>
-                <div>
-                  <Label htmlFor="message">Message</Label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    value={formData.message}
-                    onChange={handleChange}
-                    rows={5}
-                    className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-green-500"
-                    required
-                  />
+                <div className="flex items-start space-x-4">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center flex-shrink-0">
+                    <span className="text-2xl">📞</span>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-gray-900">Phone</h4>
+                    <p className="text-gray-600">+1 (555) 123-4567</p>
+                  </div>
                 </div>
-                <Button
-                  type="submit"
-                  className="w-full bg-green-600 hover:bg-green-700 text-white"
-                >
-                  Send Message
-                </Button>
-              </form>
+              </div>
             </div>
 
             {/* FAQ Section */}
-            <div>
-              <h3 className="text-2xl font-semibold text-gray-900 mb-6">
-                Frequently Asked Questions
-              </h3>
-              <div className="space-y-4">
-                {[
-                  {
-                    question: "How does blockchain ensure product authenticity?",
-                    answer:
-                      "Every product transaction is recorded on the blockchain, creating an immutable trail from farm to consumer."
-                  },
-                  {
-                    question: "What wallets are supported?",
-                    answer:
-                      "We support MetaMask and other popular Web3 wallets for secure transactions."
-                  },
-                  {
-                    question: "Is there a mobile app?",
-                    answer:
-                      "Our platform is fully responsive and works seamlessly on all mobile devices."
-                  }
-                ].map((faq, idx) => (
-                  <div key={idx} className="bg-gray-50 rounded-lg p-4">
-                    <h4 className="font-semibold text-gray-900 mb-2">{faq.question}</h4>
-                    <p className="text-gray-600 text-sm">{faq.answer}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            {/* <FAQ /> */}
           </div>
         </div>
       </div>

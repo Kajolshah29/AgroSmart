@@ -19,10 +19,17 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import { User, Home, Settings, LogOut, Edit, Check, Trash2, MessageSquare } from "lucide-react";
+import { User, Home, Settings, LogOut, Edit, Check, Trash2 } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import AIChatPopup from "../../components/AIChatPopup";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../../components/ui/select";
+import { states, districts, talukas } from '@/src/data/locations';
 
 interface Product {
   _id: string;
@@ -38,6 +45,11 @@ interface Product {
   status: 'available' | 'sold' | 'reserved';
   farmer: string; // Farmer ID
   createdAt: string;
+  unit: string;
+  stock: number;
+  state?: string;
+  district?: string;
+  taluka?: string;
 }
 
 interface Order {
@@ -70,12 +82,15 @@ const FarmerDashboard = () => {
     name: "",
     description: "",
     price: "",
-    quantity: "",
+    unit: "",
+    stock: "",
     category: "",
-    location: "",
+    state: "",
+    district: "",
+    taluka: "",
     harvestDate: "",
     isOrganic: false,
-    image: null as File | null,
+    images: [] as File[],
   });
 
   const [products, setProducts] = useState<Product[]>([]);
@@ -86,7 +101,23 @@ const FarmerDashboard = () => {
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [orderError, setOrderError] = useState<string | null>(null);
 
-  const [showAIChat, setShowAIChat] = useState(false);
+  // Add stats state
+  const [stats, setStats] = useState({
+    totalProducts: 0,
+    pendingRequests: 0,
+    totalSales: 0
+  });
+
+  // Calculate stats whenever products or orders change
+  useEffect(() => {
+    setStats({
+      totalProducts: products.length,
+      pendingRequests: orders.filter(order => order.status === 'pending').length,
+      totalSales: orders
+        .filter(order => order.status === 'completed')
+        .reduce((sum, order) => sum + order.totalAmount, 0)
+    });
+  }, [products, orders]);
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -215,11 +246,17 @@ const FarmerDashboard = () => {
   ];
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    const { name, value, type } = e.target;
+    const target = e.target as HTMLInputElement;
+    const name = target.name;
+    const type = target.type;
+    const value = target.value;
+    const checked = target.checked;
+    const files = target.files;
+
     if (type === 'checkbox') {
-       setFormData({ ...formData, [name]: (e.target as HTMLInputElement).checked });
-    } else if (name === "image") {
-      setFormData({ ...formData, [name]: (e.target as HTMLInputElement).files?.[0] || null });
+       setFormData({ ...formData, [name]: checked });
+    } else if (type === 'file') {
+        setFormData({ ...formData, [name]: files ? files[0] : null });
     } else {
       setFormData({ ...formData, [name]: value });
     }
@@ -227,9 +264,10 @@ const FarmerDashboard = () => {
 
   const handleSubmitProduce = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.price || !formData.quantity || !formData.category || !formData.location) {
-      toast.error('Please fill in all required fields.');
-      return;
+
+    if (!formData.name || !formData.description || !formData.price || !formData.unit || !formData.stock || !formData.category) {
+        toast.error('Please fill in all required fields.');
+        return;
     }
 
     // Prepare FormData
@@ -237,180 +275,141 @@ const FarmerDashboard = () => {
     data.append('name', formData.name);
     data.append('description', formData.description);
     data.append('price', formData.price);
-    data.append('quantity', formData.quantity);
+    data.append('unit', formData.unit);
+    data.append('stock', formData.stock);
     data.append('category', formData.category);
-    data.append('location', formData.location);
+    data.append('state', formData.state);
+    data.append('district', formData.district);
+    data.append('taluka', formData.taluka);
     if (formData.harvestDate) {
         data.append('harvestDate', formData.harvestDate);
     }
     data.append('isOrganic', formData.isOrganic.toString());
-    if (formData.image) {
-      data.append('images', formData.image);
+    
+    // Append all images
+    formData.images.forEach((image, index) => {
+        data.append('images', image);
+    });
+
+    try {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            toast.error('Authentication token not found. Please log in.');
+            return;
+        }
+
+        const response = await fetch('http://localhost:5000/api/products/farmer', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+            },
+            body: data,
+        });
+
+        const result = await response.json();
+
+        if (!response.ok) {
+            throw new Error(result.message || 'Failed to add product');
+        }
+
+        toast.success('Product added successfully!');
+        setShowAddForm(false);
+        setFormData({
+            name: "",
+            description: "",
+            price: "",
+            unit: "",
+            stock: "",
+            category: "",
+            state: "",
+            district: "",
+            taluka: "",
+            harvestDate: "",
+            isOrganic: false,
+            images: [],
+        });
+        fetchProducts(); // Refresh the product list
+    } catch (err: any) {
+        toast.error(err.message);
+        console.error('Error adding product:', err);
+    }
+  };
+
+  const handleEditProduct = (product: Product) => {
+    setShowEditForm(product);
+  };
+
+  const handleDeleteProduct = async (productId: string) => {
+    if (!confirm('Are you sure you want to delete this product?')) {
+      return;
     }
 
     try {
       const token = localStorage.getItem('token');
       if (!token) {
-        toast.error('Authentication token not found. Please log in.');
+        toast.error('Authentication token not found');
         return;
       }
 
-      const response = await fetch('http://localhost:5000/api/products/farmer', {
-        method: 'POST',
+      const response = await fetch(`http://localhost:5000/api/products/${productId}`, {
+        method: 'DELETE',
         headers: {
-          'Authorization': `Bearer ${token}`,
-          // Do NOT set Content-Type for FormData, the browser does it automatically
-        },
-        body: data,
+          'Authorization': `Bearer ${token}`
+        }
       });
-
-      const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || 'Failed to add product');
+        throw new Error('Failed to delete product');
       }
 
-      toast.success('Product added successfully!');
-      setShowAddForm(false);
-      setFormData({
-        name: "", description: "", price: "", quantity: "", category: "", location: "", harvestDate: "", isOrganic: false, image: null,
-      });
-      fetchProducts(); // Refresh the product list
-    } catch (err: any) {
-      toast.error(err.message);
-      console.error('Error adding product:', err);
+      // Refresh products after deletion
+      fetchProducts();
+      toast.success('Product deleted successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to delete product');
     }
   };
 
-  const handleEditProduct = (product: Product) => {
-      setShowEditForm(product);
-      setFormData({
-          name: product.name,
-          description: product.description,
-          price: product.price.toString(),
-          quantity: product.quantity.toString(),
-          category: product.category,
-          location: product.location,
-          harvestDate: product.harvestDate || '', // Handle potential undefined
-          isOrganic: product.isOrganic,
-          image: null, // Image editing might require separate handling
-      });
-  };
-
   const handleUpdateProduct = async (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!showEditForm) return;
-
-      // Basic validation (you might want more comprehensive validation)
-      if (!formData.name || !formData.price || !formData.quantity || !formData.category || !formData.location) {
-        toast.error('Please fill in all required fields.');
-        return;
-      }
-
-      // Prepare FormData
-      const data = new FormData();
-      data.append('name', formData.name);
-      data.append('description', formData.description);
-      data.append('price', formData.price);
-      data.append('quantity', formData.quantity);
-      data.append('category', formData.category);
-      data.append('location', formData.location);
-      if (formData.harvestDate) {
-          data.append('harvestDate', formData.harvestDate);
-      }
-      data.append('isOrganic', formData.isOrganic.toString());
-      if (formData.image) {
-        data.append('images', formData.image);
-      }
-
-      try {
-        const token = localStorage.getItem('token');
-        if (!token) {
-          toast.error('Authentication token not found. Please log in.');
-          return;
-        }
-
-        const response = await fetch(`http://localhost:5000/api/products/farmer/${showEditForm._id}`, {
-          method: 'PUT',
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            // Do NOT set Content-Type for FormData
-          },
-          body: data,
-        });
-
-         const result = await response.json();
-
-        if (!response.ok) {
-          throw new Error(result.message || 'Failed to update product');
-        }
-
-        toast.success('Product updated successfully!');
-        setShowEditForm(null);
-        setFormData({ name: "", description: "", price: "", quantity: "", category: "", location: "", harvestDate: "", isOrganic: false, image: null });
-        fetchProducts(); // Refresh the product list
-      } catch (err: any) {
-        toast.error(err.message);
-         console.error('Error updating product:', err);
-      }
-  };
-
-  const handleDeleteProduct = async (productId: string) => {
-    // TODO: Implement delete submission to backend
-    console.log("Deleting produce with ID:", productId);
+    e.preventDefault();
+    if (!showEditForm) return;
 
     try {
       const token = localStorage.getItem('token');
-       if (!token) {
-        toast.error('Authentication token not found. Please log in.');
+      if (!token) {
+        toast.error('Authentication token not found');
         return;
       }
-      const response = await fetch(`http://localhost:5000/api/products/farmer/${productId}`, {
-        method: 'DELETE',
+
+      const response = await fetch(`http://localhost:5000/api/products/${showEditForm._id}`, {
+        method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
+        body: JSON.stringify(showEditForm)
       });
 
-      const result = await response.json();
-
       if (!response.ok) {
-        throw new Error(result.message || 'Failed to delete product');
+        throw new Error('Failed to update product');
       }
 
-      toast.success('Product deleted successfully!');
-      fetchProducts(); // Refresh the product list
-    } catch (err: any) {
-      toast.error(err.message);
-      console.error('Error deleting product:', err);
+      // Refresh products after update
+      fetchProducts();
+      setShowEditForm(null);
+      toast.success('Product updated successfully');
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update product');
     }
   };
 
   const handleLogout = () => {
-    // Clear authentication data from local storage
     localStorage.removeItem('token');
     localStorage.removeItem('user');
-    // Redirect to login page
-    router.push('/');
+    router.push('/login');
   };
 
-  const calculateStats = () => {
-    const totalProducts = products.length;
-    const pendingRequests = orders.filter(order => order.status === 'pending').length;
-    const totalSales = orders
-      .filter(order => order.status === 'completed')
-      .reduce((sum, order) => sum + order.totalAmount, 0);
-
-    return {
-      totalProducts,
-      pendingRequests,
-      totalSales
-    };
-  };
-
-  const stats = calculateStats();
-
-  const handleOrderStatusUpdate = async (orderId: string, newStatus: string) => {
+  const handleOrderStatusUpdate = async (orderId: string, status: string) => {
     try {
       const token = localStorage.getItem('token');
       if (!token) {
@@ -421,20 +420,21 @@ const FarmerDashboard = () => {
       const response = await fetch(`http://localhost:5000/api/orders/${orderId}/status`, {
         method: 'PUT',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify({ status: newStatus }),
+        body: JSON.stringify({ status })
       });
 
       if (!response.ok) {
         throw new Error('Failed to update order status');
       }
 
+      // Refresh orders after update
+      fetchOrders();
       toast.success('Order status updated successfully');
-      fetchOrders(); // Refresh orders
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update order status');
     }
   };
 
@@ -508,179 +508,259 @@ const FarmerDashboard = () => {
         return (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-gray-900">My Produce</h2>
-              <Button
-                onClick={() => {setShowAddForm(true); setShowEditForm(null);}}
-                className="bg-green-600 hover:bg-green-700"
-              >
-                Add New Produce
-              </Button>
+              <h2 className="text-2xl font-semibold">My Produce</h2>
+              <Button onClick={() => setShowAddForm(true)}>+ Add New Produce</Button>
             </div>
 
-            {isLoading && <p>Loading products...</p>}
-            {error && <p className="text-red-500">Error: {error}</p>}
+            {showAddForm && (
+  <Card className="p-6">
+    <CardTitle className="mb-4">Add New Produce</CardTitle>
+    <form onSubmit={handleSubmitProduce} className="space-y-4">
+      
+      {/* Form Fields */}
+      <div>
+        <Label htmlFor="name">Produce Name</Label>
+        <Input id="name" name="name" value={formData.name} onChange={handleInputChange} required />
+      </div>
+      <div>
+        <Label htmlFor="description">Description</Label>
+        <Input id="description" name="description" value={formData.description} onChange={handleInputChange} required />
+      </div>
 
-            {!isLoading && !error && products.length === 0 && (
-                <p>You haven't added any produce yet.</p>
-            )}
+      {/* Pricing & Inventory */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <Label htmlFor="price">Price</Label>
+          <Input id="price" name="price" type="number" step="0.01" value={formData.price} onChange={handleInputChange} required />
+        </div>
+        <div>
+          <Label htmlFor="unit">Unit (e.g., kg, dozen)</Label>
+          <Input id="unit" name="unit" value={formData.unit} onChange={handleInputChange} required />
+        </div>
+        <div>
+          <Label htmlFor="stock">Stock Available</Label>
+          <Input id="stock" name="stock" type="number" value={formData.stock} onChange={handleInputChange} required />
+        </div>
+      </div>
 
-            {(showAddForm || showEditForm) && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>{showEditForm ? 'Edit Produce' : 'Add New Produce'}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={showEditForm ? handleUpdateProduct : handleSubmitProduce} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label htmlFor="name">Product Name</Label>
-                        <Input
-                          id="name"
-                          name="name"
-                          value={formData.name}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="description">Description</Label>
-                        <Input
-                          id="description"
-                          name="description"
-                          value={formData.description}
-                          onChange={handleInputChange}
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="price">Price</Label>
-                        <Input
-                          id="price"
-                          name="price"
-                          type="number"
-                          value={formData.price}
-                          onChange={handleInputChange}
-                          placeholder="5.99"
-                          required
-                          step="0.01"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="quantity">Quantity</Label>
-                        <Input
-                          id="quantity"
-                          name="quantity"
-                          type="number"
-                          value={formData.quantity}
-                          onChange={handleInputChange}
-                          placeholder="50"
-                          required
-                          step="1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="category">Category</Label>
-                        <Input
-                          id="category"
-                          name="category"
-                          value={formData.category}
-                          onChange={handleInputChange}
-                          placeholder="Vegetables"
-                          required
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="location">Location</Label>
-                        <Input
-                          id="location"
-                          name="location"
-                          value={formData.location}
-                          onChange={handleInputChange}
-                          placeholder="Farm location"
-                          required
-                        />
-                      </div>
-                       <div>
-                        <Label htmlFor="harvestDate">Harvest Date</Label>
-                        <Input
-                          id="harvestDate"
-                          name="harvestDate"
-                          type="date"
-                          value={formData.harvestDate}
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                       <div>
-                        <Label htmlFor="isOrganic">Is Organic</Label>
-                        <Input
-                          id="isOrganic"
-                          name="isOrganic"
-                          type="checkbox"
-                          checked={formData.isOrganic}
-                          onChange={handleInputChange}
-                          className="h-4 w-4 text-green-600 border-gray-300 rounded focus:ring-green-500"
-                        />
-                      </div>
-                       <div>
-                        <Label htmlFor="image">Product Image</Label>
-                        <Input
-                          id="image"
-                          name="image"
-                          type="file"
-                          onChange={handleInputChange}
-                        />
-                      </div>
-                    </div>
-                    <Button type="submit" className="bg-green-600 hover:bg-green-700 w-full">
-                      {showEditForm ? 'Update Produce' : 'Add Produce'}
-                    </Button>
-                     <Button type="button" variant="outline" onClick={() => {setShowAddForm(false); setShowEditForm(null);}} className="w-full mt-2">
-                      Cancel
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            )}
+      {/* Location */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div>
+          <Label htmlFor="state">State</Label>
+          <Select name="state" value={formData.state} onValueChange={(value) => setFormData({ ...formData, state: value })}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select state" />
+            </SelectTrigger>
+            <SelectContent>
+              {states.map((state) => (
+                <SelectItem key={state} value={state}>{state}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="district">District</Label>
+          <Select name="district" value={formData.district} onValueChange={(value) => setFormData({ ...formData, district: value })}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select district" />
+            </SelectTrigger>
+            <SelectContent>
+              {districts[formData.state]?.map((district) => (
+                <SelectItem key={district} value={district}>{district}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div>
+          <Label htmlFor="taluka">Taluka</Label>
+          <Select name="taluka" value={formData.taluka} onValueChange={(value) => setFormData({ ...formData, taluka: value })}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select taluka" />
+            </SelectTrigger>
+            <SelectContent>
+              {talukas[formData.district]?.map((taluka) => (
+                <SelectItem key={taluka} value={taluka}>{taluka}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
 
-            {!showAddForm && !showEditForm && products.length > 0 && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>My Produce List</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Name</TableHead>
-                        <TableHead>Price</TableHead>
-                        <TableHead>Quantity</TableHead>
-                        <TableHead>Category</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Actions</TableHead>
+      {/* Category */}
+      <div>
+        <Label htmlFor="category">Category</Label>
+        <Select name="category" value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select category" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="vegetables">Vegetables</SelectItem>
+            <SelectItem value="fruits">Fruits</SelectItem>
+            <SelectItem value="grains">Grains</SelectItem>
+            <SelectItem value="dairy">Dairy</SelectItem>
+            <SelectItem value="other">Other</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Harvest Date */}
+      <div>
+        <Label htmlFor="harvestDate">Harvest Date</Label>
+        <Input id="harvestDate" name="harvestDate" type="date" value={formData.harvestDate} onChange={handleInputChange} />
+      </div>
+
+      {/* Organic Status */}
+      <div className="flex items-center space-x-2">
+        <input
+          type="checkbox"
+          id="isOrganic"
+          name="isOrganic"
+          checked={formData.isOrganic}
+          onChange={(e) => setFormData({ ...formData, isOrganic: e.target.checked })}
+          className="form-checkbox"
+        />
+        <Label htmlFor="isOrganic">Is Organic?</Label>
+      </div>
+
+      {/* Images */}
+      <div>
+        <Label htmlFor="images">Produce Images (up to 5)</Label>
+        <Input
+          id="images"
+          name="images"
+          type="file"
+          accept="image/*"
+          multiple
+          onChange={(e) => {
+            const files = Array.from(e.target.files || []);
+            if (files.length > 5) {
+              toast.error('Maximum 5 images allowed');
+              return;
+            }
+            setFormData({ ...formData, images: files });
+          }}
+        />
+      </div>
+
+      {/* Form Actions */}
+      <div className="flex justify-end space-x-2">
+        <Button variant="outline" type="button" onClick={() => setShowAddForm(false)}>
+          Cancel
+        </Button>
+        <Button type="submit">Add Produce</Button>
+      </div>
+    </form>
+  </Card>
+)}
+
+
+            {/* My Produce Table */}
+            {!showAddForm && !showEditForm && (
+            <Card>
+              <CardHeader>
+                <CardTitle>My Listings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <p>Loading products...</p>
+                ) : error ? (
+                  <p className="text-red-500">Error loading products: {error}</p>
+                ) : products.length === 0 ? (
+                  <p>No products listed yet. Add your first produce!</p>
+                ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Image</TableHead>
+                      <TableHead>Name</TableHead>
+                      <TableHead>Price</TableHead>
+                      <TableHead>Stock</TableHead>
+                      <TableHead>Category</TableHead>
+                      <TableHead>Location</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {products.map((product) => (
+                      <TableRow key={product._id}>
+                        <TableCell>
+                          {product.images && product.images[0] ? (
+                            <img src={`http://localhost:5000/${product.images[0]}`} alt={product.name} className="w-12 h-12 object-cover rounded" />
+                          ) : (
+                            <div className="w-12 h-12 bg-gray-200 rounded flex items-center justify-center text-gray-500 text-sm">No Image</div>
+                          )}
+                        </TableCell>
+                        <TableCell>{product.name}</TableCell>
+                         <TableCell>₹{product.price} / {product.unit}</TableCell>
+                        <TableCell>{product.stock} {product.unit}</TableCell>
+                        <TableCell>{product.category}</TableCell>
+                        {/* Assuming location string is stored in a single field for simplicity in existing data */}
+                         <TableCell>{`${product.taluka || ''}, ${product.district || ''}, ${product.state || ''}`}</TableCell>
+                        <TableCell>{product.status}</TableCell>
+                        <TableCell className="text-right">
+                          <Button variant="outline" size="sm" className="mr-2" onClick={() => handleEditProduct(product)}><Edit className="w-4 h-4" /></Button>
+                          <Button variant="outline" size="sm" className="text-red-600" onClick={() => handleDeleteProduct(product._id)}><Trash2 className="w-4 h-4" /></Button>
+                        </TableCell>
                       </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {products.map((produce) => (
-                        <TableRow key={produce._id}>
-                          <TableCell>{produce.name}</TableCell>
-                          <TableCell>${produce.price.toFixed(2)}</TableCell>
-                          <TableCell>{produce.quantity}</TableCell>
-                          <TableCell>{produce.category}</TableCell>
-                          <TableCell>{produce.status}</TableCell>
-                          <TableCell className="flex items-center space-x-2">
-                             <Button variant="outline" size="sm" onClick={() => handleEditProduct(produce)}>
-                               <Edit className="w-4 h-4" />
-                            </Button>
-                             <Button variant="outline" size="sm" color="red" onClick={() => handleDeleteProduct(produce._id)}>
-                               <Trash2 className="w-4 h-4 text-red-500" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </CardContent>
-              </Card>
+                    ))}
+                  </TableBody>
+                </Table>
+                 )}
+              </CardContent>
+            </Card>
+             )}
+
+            {/* Edit Produce Form */}
+            {showEditForm && (
+                <Card className="p-6">
+                <CardTitle className="mb-4">Edit Produce</CardTitle>
+                 <form onSubmit={handleUpdateProduct} className="space-y-4">
+                  <div>
+                    <Label htmlFor="edit-name">Produce Name</Label>
+                    <Input id="edit-name" value={showEditForm.name} onChange={(e) => setShowEditForm({ ...showEditForm!, name: e.target.value })} required />
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-description">Description</Label>
+                    <Input id="edit-description" value={showEditForm.description} onChange={(e) => setShowEditForm({ ...showEditForm!, description: e.target.value })} required />
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                      <Label htmlFor="edit-price">Price</Label>
+                      <Input id="edit-price" type="number" step="0.01" value={showEditForm.price} onChange={(e) => setShowEditForm({ ...showEditForm!, price: parseFloat(e.target.value) })} required />
+                    </div>
+                     <div>
+                      <Label htmlFor="edit-unit">Unit (e.g., kg, dozen)</Label>
+                      <Input id="edit-unit" value={showEditForm.unit} onChange={(e) => setShowEditForm({ ...showEditForm!, unit: e.target.value })} required />
+                    </div>
+                    <div>
+                      <Label htmlFor="edit-stock">Stock Available</Label>
+                      <Input id="edit-stock" type="number" value={showEditForm.stock} onChange={(e) => setShowEditForm({ ...showEditForm!, stock: parseInt(e.target.value, 10) })} required />
+                    </div>
+                  </div>
+                  <div>
+                    <Label htmlFor="edit-category">Category</Label>
+                     <Select onValueChange={(value) => setShowEditForm({ ...showEditForm!, category: value })} value={showEditForm.category} required>
+                        <SelectTrigger>
+                            <SelectValue placeholder="Select category" />
+                        </SelectTrigger>
+                        <SelectContent>
+                            <SelectItem value="Vegetables">Vegetables</SelectItem>
+                            <SelectItem value="Fruits">Fruits</SelectItem>
+                            <SelectItem value="Grains">Grains</SelectItem>
+                            <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                    </Select>
+                  </div>
+                  {/* Location fields are not present in the edit form currently - consider adding */}
+                   {/* Add Image Upload for Edit - currently not implemented */}
+
+                  <div className="flex justify-end space-x-2">
+                    <Button variant="outline" onClick={() => setShowEditForm(null)}>Cancel</Button>
+                    <Button type="submit">Save Changes</Button>
+                  </div>
+                </form>
+                </Card>
             )}
           </div>
         );
@@ -868,14 +948,6 @@ const FarmerDashboard = () => {
               <Edit className="w-4 h-4 mr-2" />
               Transactions
             </Button>
-            <Button
-              variant="ghost"
-              className="w-full justify-start text-green-600 hover:text-green-700 hover:bg-green-50/50"
-              onClick={() => setShowAIChat(true)}
-            >
-              <MessageSquare className="w-4 h-4 mr-2" />
-              AI Assistant
-            </Button>
             <Link href="/profile?type=farmer">
               <Button variant="ghost" className="w-full justify-start">
                 <User className="w-4 h-4 mr-2" />
@@ -898,9 +970,6 @@ const FarmerDashboard = () => {
           {renderDashboardContent()}
         </div>
       </div>
-
-      {/* AI Chat Popup */}
-      <AIChatPopup isOpen={showAIChat} onClose={() => setShowAIChat(false)} />
     </div>
   );
 };

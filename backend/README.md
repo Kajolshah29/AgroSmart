@@ -1,6 +1,6 @@
-# Agrichain Backend
+# AgroSmart Backend
 
-This is the backend server for the Agrichain project.
+This is the backend server for the AgroSmart project.
 
 ## Setup Instructions
 
@@ -12,7 +12,7 @@ npm install
 2. Create a `.env` file in the backend directory with the following variables:
 ```
 PORT=5000
-MONGODB_URI=mongodb://localhost:27017/agrichain
+MONGODB_URI=mongodb://localhost:27017/agrosmart
 ```
 
 3. Make sure MongoDB is installed and running on your system.

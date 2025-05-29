@@ -14,11 +14,6 @@ const Features = () => {
       icon: "💼",
       title: "Smart Contracts",
       description: "Secure payments and digital proof of transaction with automated contract execution."
-    },
-    {
-      icon: "🧠",
-      title: "AI Assistance",
-      description: "Built-in chatbot for farming & trade questions to guide you through the process."
     }
   ];
 
@@ -27,7 +22,7 @@ const Features = () => {
       <div className="container mx-auto px-6">
         <div className="text-center mb-20">
           <h2 className="text-5xl font-bold text-gray-900 mb-6">
-            Why Choose AgriChain?
+            Why Choose AgroSmart?
           </h2>
           <div className="w-24 h-1 bg-green-600 mx-auto rounded mb-6"></div>
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
@@ -35,7 +30,7 @@ const Features = () => {
           </p>
         </div>
         
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {features.map((feature, index) => (
             <div 
               key={index}

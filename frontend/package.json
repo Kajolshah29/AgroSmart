@@ -1,5 +1,5 @@
 {
-  "name": "agrichain",
+  "name": "agrosmart",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -10,17 +10,25 @@
   },
   "dependencies": {
     "@radix-ui/react-avatar": "^1.1.10",
+    "@radix-ui/react-dialog": "^1.1.14",
     "@radix-ui/react-label": "^2.1.7",
+    "@radix-ui/react-select": "^2.2.5",
     "@radix-ui/react-slot": "^1.2.3",
+    "@react-google-maps/api": "^2.20.6",
+    "@types/leaflet": "^1.9.18",
     "@types/react-router-dom": "^5.3.3",
+    "axios": "^1.9.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.15.0",
+    "leaflet": "^1.9.4",
     "lucide-react": "^0.511.0",
     "multer": "^2.0.0",
     "next": "15.3.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-hot-toast": "^2.5.2",
+    "react-leaflet": "^5.0.0",
     "react-router-dom": "^7.6.1",
     "tailwind-merge": "^3.3.0",
     "tailwind-variants": "^1.0.0"

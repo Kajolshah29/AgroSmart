@@ -15,7 +15,11 @@ const productSchema = new mongoose.Schema({
         required: true,
         min: 0
     },
-    quantity: {
+    unit: {
+        type: String,
+        required: true
+    },
+    stock: {
         type: Number,
         required: true,
         min: 0
@@ -31,11 +35,18 @@ const productSchema = new mongoose.Schema({
         required: true
     },
     images: [{
-        type: String
-    }],
-    location: {
         type: String,
         required: true
+    }],
+    location: {
+        lat: {
+            type: Number,
+            default: 0
+        },
+        lng: {
+            type: Number,
+            default: 0
+        }
     },
     harvestDate: {
         type: Date
@@ -52,8 +63,19 @@ const productSchema = new mongoose.Schema({
     createdAt: {
         type: Date,
         default: Date.now
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now
     }
 });
 
+// Update the updatedAt field before saving
+productSchema.pre('save', function(next) {
+    this.updatedAt = Date.now();
+    next();
+});
+
 const Product = mongoose.model('Product', productSchema);
+
 module.exports = Product; 

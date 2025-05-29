@@ -84,30 +84,72 @@ router.get('/farmer', protect, async (req, res) => {
 // @access  Private (Farmer)
 router.post('/farmer', protect, upload.array('images', 5), async (req, res) => {
     try {
-        // req.body will contain the text fields
-        // req.files will contain the uploaded image file(s)
-        const { name, description, price, quantity, category, location, harvestDate, isOrganic, status } = req.body;
+        const { 
+            name, 
+            description, 
+            price, 
+            unit,
+            stock, 
+            category, 
+            state, 
+            district, 
+            taluka, 
+            harvestDate, 
+            isOrganic 
+        } = req.body;
+
+        // Basic validation
+        if (!name || !description || !price || !unit || !stock || !category) {
+            return res.status(400).json({ 
+                success: false,
+                message: 'Please fill in all required fields' 
+            });
+        }
+
+        // Get uploaded images paths
         const images = req.files ? req.files.map(file => file.path) : [];
 
         const product = new Product({
             name,
             description,
             price,
-            quantity,
+            unit,
+            stock,
             category,
-            farmer: req.farmer._id, // Associate product with the logged-in farmer
+            farmer: req.farmer._id,
             images,
-            location,
-            harvestDate,
-            isOrganic: isOrganic === 'true', // Convert string boolean to boolean
-            status
+            farmerName: req.farmer.name,
+            farmerAddress: req.farmer.address,
+            state: state || req.farmer.state,
+            district: district || req.farmer.district,
+            taluka: taluka || req.farmer.taluka,
+            location: {
+                lat: req.farmer.location?.lat || 0,
+                lng: req.farmer.location?.lng || 0
+            },
+            harvestDate: harvestDate || undefined,
+            isOrganic: isOrganic === 'true',
+            status: 'available'
         });
 
         const createdProduct = await product.save();
-        res.status(201).json(createdProduct);
+        
+        // Populate farmer details for response
+        const populatedProduct = await Product.findById(createdProduct._id)
+            .populate('farmer', 'name location');
+
+        res.status(201).json({
+            success: true,
+            message: 'Product added successfully!',
+            product: populatedProduct
+        });
     } catch (error) {
         console.error('Error adding product:', error);
-        res.status(500).json({ message: 'Server Error' });
+        res.status(500).json({ 
+            success: false,
+            message: 'Error creating product',
+            error: error.message 
+        });
     }
 });
 

@@ -1,33 +1,25 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
-const bodyParser = require('body-parser');
-const dotenv = require('dotenv');
-const connectDB = require('./config/db');
+const path = require('path');
+const config = require('./config/config');
+const { errorHandler } = require('./middleware/error');
 const authRoutes = require('./routes/auth');
 const productRoutes = require('./routes/products');
 const orderRoutes = require('./routes/orders');
-const path = require('path');
-const ollamaRoutes = require('./routes/ollama');
-
-
-// Load environment variables
-dotenv.config();
 
 const app = express();
 
 // Middleware
-app.use(cors());
-app.use(bodyParser.json());
+app.use(cors({
+    origin: config.CORS_ORIGIN,
+    credentials: true
+}));
 app.use(express.json());
-app.use('/api/ollama', ollamaRoutes);
+app.use(express.urlencoded({ extended: true }));
 
-
-// Serve static files from the 'uploads' directory
+// Serve static files from uploads directory
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Connect to MongoDB
-connectDB();
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -36,16 +28,41 @@ app.use('/api/orders', orderRoutes);
 
 // Basic route
 app.get('/', (req, res) => {
-    res.json({ message: 'Welcome to Agrichain API' });
+    res.json({ message: 'Welcome to AgroSmart API' });
 });
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-    console.error('Error:', err.stack);
-    res.status(500).json({ message: 'Something went wrong!', error: err.message });
-});
+// Error handling
+app.use(errorHandler);
 
-const PORT = process.env.PORT || 5000;
+// Connect to MongoDB
+mongoose.connect(config.MONGODB_URI)
+    .then(() => {
+        console.log('MongoDB connected successfully');
+        console.log('Database:', mongoose.connection.name);
+        console.log('Host:', mongoose.connection.host);
+    })
+    .catch((err) => {
+        console.error('MongoDB connection error:', err);
+        process.exit(1);
+    });
+
+// Start server
+const PORT = config.PORT;
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
+    console.log(`Environment: ${config.NODE_ENV}`);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err) => {
+    console.error('UNHANDLED REJECTION! 💥 Shutting down...');
+    console.error(err.name, err.message);
+    process.exit(1);
+});
+
+// Handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+    console.error('UNCAUGHT EXCEPTION! 💥 Shutting down...');
+    console.error(err.name, err.message);
+    process.exit(1);
 }); 

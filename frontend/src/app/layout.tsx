@@ -1,13 +1,15 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { AuthProvider } from "../context/AuthContext";
 import { Toaster } from "react-hot-toast";
 
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "AgriChain - Connecting Farmers and Buyers",
-  description: "A platform connecting farmers directly with buyers",
+  title: "AgroSmart - Agricultural Marketplace",
+  description: "A modern agricultural marketplace platform connecting farmers and buyers.",
+  keywords: "agriculture, marketplace, farmers, buyers, crops, produce",
 };
 
 export default function RootLayout({
@@ -18,8 +20,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={inter.className}>
-        {children}
-        <Toaster position="top-center" />
+        <AuthProvider>
+          {children}
+          <Toaster position="top-right" />
+        </AuthProvider>
       </body>
     </html>
   );

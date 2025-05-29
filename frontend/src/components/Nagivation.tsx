@@ -37,11 +37,11 @@ const Navigation = () => {
           <div className="flex items-center space-x-2">
             <img
               src="/image 11.png"
-              alt="AgriChain Logo"
+              alt="AgroSmart Logo"
               className="h-12 w-12 object-contain"
             />
             <span className="text-2xl font-bold text-gray-900">
-              Agri<span className="text-green-600">Chain</span>
+              Agro<span className="text-green-600">Smart</span>
             </span>
           </div>
 

@@ -7,6 +7,9 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { toast } from "react-hot-toast";
+import { Card, CardContent, CardHeader, CardTitle } from '@/src/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/src/components/ui/select';
+import { states, districts, talukas } from '@/src/data/locations';
 
 const Register = () => {
   const router = useRouter();
@@ -20,6 +23,9 @@ const Register = () => {
     confirmPassword: "",
     phone: "",
     address: "",
+    state: "",
+    district: "",
+    taluka: "",
     // Additional fields based on user type
     farmDetails: {
       farmName: "",
@@ -57,6 +63,7 @@ const Register = () => {
   const [isLoading, setIsLoading] = useState(false);
 
   const validateForm = () => {
+    console.log('Validating form...');
     const newErrors = {
       name: "",
       email: "",
@@ -93,8 +100,13 @@ const Register = () => {
       isValid = false;
     }
 
-    if (formData.password.length < 6) {
-      newErrors.password = "Password must be at least 6 characters long";
+    // Enhanced password validation
+    const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+      isValid = false;
+    } else if (!passwordRegex.test(formData.password)) {
+      newErrors.password = "Password must be at least 8 characters long and contain uppercase, lowercase, number and special character";
       isValid = false;
     }
 
@@ -112,6 +124,23 @@ const Register = () => {
       newErrors.address = "Address is required";
       isValid = false;
     }
+
+    // Location validations
+     if (!formData.state) {
+        // Assuming state selection is required
+        isValid = false;
+        // You might want to add an error message for state as well
+    }
+     if (!formData.district) {
+        // Assuming district selection is required
+         isValid = false;
+         // You might want to add an error message for district as well
+     }
+     if (!formData.taluka) {
+        // Assuming taluka selection is required
+         isValid = false;
+         // You might want to add an error message for taluka as well
+     }
 
     // Role-specific validations
     if (userType === 'farmer') {
@@ -143,13 +172,20 @@ const Register = () => {
     }
 
     setErrors(newErrors);
+     console.log('Validation errors:', newErrors);
     return isValid;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!validateForm()) {
+    console.log('Attempting to submit registration form.');
+    const isFormValid = validateForm();
+    console.log('Form validation result:', isFormValid);
+
+    if (!isFormValid) {
+      console.log('Form validation failed. Aborting submission.');
+      toast.error('Please fill in all required fields correctly.'); // Show a general error message for validation failure
       return;
     }
 
@@ -159,6 +195,21 @@ const Register = () => {
       const endpoint = userType === 'farmer' 
         ? 'http://localhost:5000/api/auth/register/farmer'
         : 'http://localhost:5000/api/auth/register/buyer';
+      
+      console.log('Sending registration request to endpoint:', endpoint);
+      console.log('Request payload:', JSON.stringify({ // Log payload, but exclude password for security
+          name: formData.name,
+          email: formData.email,
+          phone: formData.phone,
+          address: formData.address,
+          state: formData.state,
+          district: formData.district,
+          taluka: formData.taluka,
+          ...(userType === 'farmer' 
+            ? { farmDetails: formData.farmDetails }
+            : { businessDetails: formData.businessDetails }
+          )
+        }));
 
       const response = await fetch(endpoint, {
         method: 'POST',
@@ -168,23 +219,32 @@ const Register = () => {
         body: JSON.stringify({
           name: formData.name,
           email: formData.email,
-          password: formData.password,
+          password: formData.password, // Include password in actual body
           phone: formData.phone,
           address: formData.address,
+          state: formData.state,
+          district: formData.district,
+          taluka: formData.taluka,
           ...(userType === 'farmer' 
             ? { farmDetails: formData.farmDetails }
             : { businessDetails: formData.businessDetails }
           )
         }),
       });
-
+      
+      console.log('Registration API response status:', response.status);
       const data = await response.json();
+      console.log('Registration API response data:', data);
 
       if (!response.ok) {
+        console.error('Registration failed on backend:', data.message);
         throw new Error(data.message || 'Registration failed');
       }
 
-      // Store token in localStorage
+      console.log('Registration successful. User data:', data.user);
+      console.log('User role:', data.user.role);
+
+      // Store token and user in localStorage
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
@@ -192,15 +252,22 @@ const Register = () => {
       toast.success(data.message);
 
       // Redirect based on role
-      if (data.user.role === 'farmer') {
+      if (data.user && data.user.role === 'farmer') {
+        console.log('Redirecting to /farmerdashboard');
         router.push('/farmerdashboard');
-      } else {
+      } else if (data.user && data.user.role === 'buyer') {
+        console.log('Redirecting to /buyersdashboard');
         router.push('/buyersdashboard');
+      } else {
+        console.log('Unknown user role or user data missing. Redirecting to home.');
+        router.push('/'); // Fallback redirect
       }
     } catch (error: any) {
-      toast.error(error.message || 'Registration failed');
+      console.error('Registration submission error:', error);
+      toast.error(error.message || 'Registration failed. Please try again.');
     } finally {
       setIsLoading(false);
+      console.log('Registration process finished.');
     }
   };
 
@@ -212,7 +279,7 @@ const Register = () => {
       setFormData(prev => ({
         ...prev,
         [parent]: {
-          ...prev[parent as keyof typeof prev],
+          ...(prev[parent as 'farmDetails' | 'businessDetails']),
           [child]: value
         }
       }));
@@ -224,91 +291,167 @@ const Register = () => {
     }
 
     // Clear error when user starts typing
-    if (errors[name as keyof typeof errors]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: ""
-      }));
+    const fieldName = name.includes('.') ? name.split('.')[1] : name; // Handle nested errors
+     if (errors[fieldName as keyof typeof errors] || (name.includes('.') && errors[name.split('.')[0] as keyof typeof errors]?.[fieldName as keyof typeof errors[keyof typeof errors]])) {
+        setErrors(prev => {
+            const newErrors = { ...prev };
+            if (name.includes('.')) {
+                 const [parent, child] = name.split('.');
+                 if (newErrors[parent as 'farmDetails' | 'businessDetails']) {
+                     newErrors[parent as 'farmDetails' | 'businessDetails'] = { ...newErrors[parent as 'farmDetails' | 'businessDetails'], [child]: "" };
+                 }
+            } else {
+                newErrors[name as keyof typeof newErrors] = "";
+            }
+            return newErrors;
+        });
     }
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50/50 via-white to-amber-50/30 py-12">
-      <div className="max-w-md w-full mx-4">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <div className="text-center mb-8">
-            <Link href="/" className="text-2xl font-bold text-gray-900">
-              Agri<span className="text-green-600">Chain</span>
-            </Link>
-            <h2 className="text-2xl font-bold text-gray-900 mt-6">
-              Join as {userType === "farmer" ? "Farmer" : "Buyer"}
-            </h2>
-            <p className="text-gray-600 mt-2">Create your AgriChain account</p>
-          </div>
-
+       <Card className="max-w-md w-full mx-4">
+        <CardHeader className="text-center">
+          <Link href="/" className="text-2xl font-bold text-gray-900">
+            Agri<span className="text-green-600">Chain</span>
+          </Link>
+          <CardTitle className="mt-6 text-2xl">
+            Join as {userType === "farmer" ? "Farmer" : "Buyer"}
+          </CardTitle>
+          <p className="text-gray-600">Create your AgroSmart account</p>
+        </CardHeader>
+        <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <Label htmlFor="name">Full Name</Label>
-              <Input
-                id="name"
-                name="name"
-                type="text"
-                value={formData.name}
-                onChange={handleChange}
-                required
-                placeholder="Enter your full name"
-                className={errors.name ? "border-red-500" : ""}
-              />
-              {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name">Full Name</Label>
+                <Input
+                  id="name"
+                  name="name"
+                  type="text"
+                  value={formData.name}
+                  onChange={handleChange}
+                  required
+                  placeholder="Enter your full name"
+                  className={errors.name ? "border-red-500" : ""}
+                />
+                {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
+              </div>
+  
+              <div className="space-y-2">
+                <Label htmlFor="email">Email address</Label>
+                <Input
+                  id="email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  placeholder="Enter your email"
+                  className={errors.email ? "border-red-500" : ""}
+                />
+                {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
+              </div>
+  
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  required
+                  placeholder="Enter your phone number"
+                  className={errors.phone ? "border-red-500" : ""}
+                />
+                {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
+              </div>
+  
+              <div className="space-y-2">
+                <Label htmlFor="address">Address</Label>
+                <Input
+                  id="address"
+                  name="address"
+                  type="text"
+                  value={formData.address}
+                  onChange={handleChange}
+                  required
+                  placeholder="Enter your address"
+                  className={errors.address ? "border-red-500" : ""}
+                />
+                {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
+              </div>
+  
+              <div className="space-y-2">
+                <Label>State</Label>
+                <Select
+                  value={formData.state}
+                  onValueChange={(value) => setFormData({ ...formData, state: value, district: '', taluka: '' })}
+                  required // Make state required
+                >
+                  <SelectTrigger className={errors.address && !formData.state ? "border-red-500" : ""}> {/* Basic highlighting for missing required state */}
+                    <SelectValue placeholder="Select State" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {states.map((state) => (
+                      <SelectItem key={state} value={state}>
+                        {state}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                 {errors.address && !formData.state && <p className="text-red-500 text-sm mt-1">State is required</p>} {/* Error message for state */}
+              </div>
+  
+              <div className="space-y-2">
+                <Label>District</Label>
+                <Select
+                  value={formData.district}
+                  onValueChange={(value) => setFormData({ ...formData, district: value, taluka: '' })}
+                  disabled={!formData.state}
+                   required // Make district required
+                >
+                  <SelectTrigger className={errors.address && !formData.district && formData.state ? "border-red-500" : ""}> {/* Basic highlighting for missing required district */}
+                    <SelectValue placeholder="Select District" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formData.state && districts[formData.state]?.map((district) => (
+                      <SelectItem key={district} value={district}>
+                        {district}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                 {errors.address && !formData.district && formData.state && <p className="text-red-500 text-sm mt-1">District is required</p>} {/* Error message for district */}
+              </div>
+  
+              <div className="space-y-2">
+                <Label>Taluka</Label>
+                <Select
+                  value={formData.taluka}
+                  onValueChange={(value) => setFormData({ ...formData, taluka: value })}
+                  disabled={!formData.district}
+                   required // Make taluka required
+                >
+                  <SelectTrigger className={errors.address && !formData.taluka && formData.district ? "border-red-500" : ""}> {/* Basic highlighting for missing required taluka */}
+                    <SelectValue placeholder="Select Taluka" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {formData.district && talukas[formData.district]?.map((taluka) => (
+                      <SelectItem key={taluka} value={taluka}>
+                        {taluka}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                 {errors.address && !formData.taluka && formData.district && <p className="text-red-500 text-sm mt-1">Taluka is required</p>} {/* Error message for taluka */}
+              </div>
             </div>
-
-            <div>
-              <Label htmlFor="email">Email address</Label>
-              <Input
-                id="email"
-                name="email"
-                type="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                placeholder="Enter your email"
-                className={errors.email ? "border-red-500" : ""}
-              />
-              {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
-            </div>
-
-            <div>
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input
-                id="phone"
-                name="phone"
-                type="tel"
-                value={formData.phone}
-                onChange={handleChange}
-                required
-                placeholder="Enter your phone number"
-                className={errors.phone ? "border-red-500" : ""}
-              />
-              {errors.phone && <p className="text-red-500 text-sm mt-1">{errors.phone}</p>}
-            </div>
-
-            <div>
-              <Label htmlFor="address">Address</Label>
-              <Input
-                id="address"
-                name="address"
-                type="text"
-                value={formData.address}
-                onChange={handleChange}
-                required
-                placeholder="Enter your address"
-                className={errors.address ? "border-red-500" : ""}
-              />
-              {errors.address && <p className="text-red-500 text-sm mt-1">{errors.address}</p>}
-            </div>
-
+  
             {userType === 'farmer' ? (
-              <>
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="text-lg font-semibold">Farm Details</h3>
                 <div>
                   <Label htmlFor="farmDetails.farmName">Farm Name</Label>
                   <Input
@@ -325,7 +468,7 @@ const Register = () => {
                     <p className="text-red-500 text-sm mt-1">{errors.farmDetails.farmName}</p>
                   )}
                 </div>
-
+  
                 <div>
                   <Label htmlFor="farmDetails.farmSize">Farm Size</Label>
                   <Input
@@ -342,7 +485,7 @@ const Register = () => {
                     <p className="text-red-500 text-sm mt-1">{errors.farmDetails.farmSize}</p>
                   )}
                 </div>
-
+  
                 <div>
                   <Label htmlFor="farmDetails.farmLocation">Farm Location</Label>
                   <Input
@@ -359,9 +502,10 @@ const Register = () => {
                     <p className="text-red-500 text-sm mt-1">{errors.farmDetails.farmLocation}</p>
                   )}
                 </div>
-              </>
+              </div>
             ) : (
-              <>
+              <div className="space-y-4 border-t pt-4">
+                <h3 className="text-lg font-semibold">Business Details</h3>
                 <div>
                   <Label htmlFor="businessDetails.businessName">Business Name</Label>
                   <Input
@@ -378,7 +522,7 @@ const Register = () => {
                     <p className="text-red-500 text-sm mt-1">{errors.businessDetails.businessName}</p>
                   )}
                 </div>
-
+  
                 <div>
                   <Label htmlFor="businessDetails.businessType">Business Type</Label>
                   <Input
@@ -395,7 +539,7 @@ const Register = () => {
                     <p className="text-red-500 text-sm mt-1">{errors.businessDetails.businessType}</p>
                   )}
                 </div>
-
+  
                 <div>
                   <Label htmlFor="businessDetails.businessLocation">Business Location</Label>
                   <Input
@@ -412,9 +556,9 @@ const Register = () => {
                     <p className="text-red-500 text-sm mt-1">{errors.businessDetails.businessLocation}</p>
                   )}
                 </div>
-              </>
+              </div>
             )}
-
+  
             <div>
               <Label htmlFor="password">Password</Label>
               <Input
@@ -424,12 +568,12 @@ const Register = () => {
                 value={formData.password}
                 onChange={handleChange}
                 required
-                placeholder="Create a password (min. 6 characters)"
+                placeholder="Create a password (min. 8 characters, uppercase, lowercase, number, special character)"
                 className={errors.password ? "border-red-500" : ""}
               />
               {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
             </div>
-
+  
             <div>
               <Label htmlFor="confirmPassword">Confirm Password</Label>
               <Input
@@ -444,7 +588,7 @@ const Register = () => {
               />
               {errors.confirmPassword && <p className="text-red-500 text-sm mt-1">{errors.confirmPassword}</p>}
             </div>
-            
+  
             <Button
               type="submit"
               className="w-full bg-green-600 hover:bg-green-700 text-white py-3"
@@ -453,7 +597,7 @@ const Register = () => {
               {isLoading ? 'Creating Account...' : 'Create Account'}
             </Button>
           </form>
-
+  
           <div className="mt-6 text-center">
             <p className="text-gray-600">
               Already have an account?{" "}
@@ -465,7 +609,7 @@ const Register = () => {
               </Link>
             </p>
           </div>
-
+  
           <div className="mt-4 text-center">
             <Link
               href="/"
@@ -474,8 +618,8 @@ const Register = () => {
               ← Back to home
             </Link>
           </div>
-        </div>
-      </div>
+        </CardContent>
+       </Card>
     </div>
   );
 };

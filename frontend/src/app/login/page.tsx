@@ -7,6 +7,7 @@ import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { toast } from "react-hot-toast";
+import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/card";
 
 const Login = () => {
   const searchParams = useSearchParams();
@@ -73,20 +74,17 @@ const Login = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-green-50/50 via-white to-amber-50/30">
-      <div className="max-w-md w-full mx-4">
-        <div className="bg-white rounded-lg shadow-lg p-8">
-          <div className="text-center mb-8">
-            <Link href="/" className="text-2xl font-bold text-gray-900">
-              Agri<span className="text-green-600">Chain</span>
-            </Link>
-            <h2 className="text-2xl font-bold text-gray-900 mt-6">
-              Welcome back, {userType === 'farmer' ? 'Farmer' : 'Buyer'}
-            </h2>
-            <p className="text-gray-600 mt-2">
-              Sign in to your AgriChain account
-            </p>
-          </div>
-
+      <Card className="max-w-md w-full mx-4">
+        <CardHeader className="text-center">
+          <Link href="/" className="text-2xl font-bold text-gray-900">
+            Agri<span className="text-green-600">Chain</span>
+          </Link>
+          <CardTitle className="mt-6 text-2xl">
+            Welcome back, {userType === 'farmer' ? 'Farmer' : 'Buyer'}
+          </CardTitle>
+          <p className="text-gray-600">Sign in to your AgroSmart account</p>
+        </CardHeader>
+        <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
               <Label htmlFor="email">Email address</Label>
@@ -145,8 +143,8 @@ const Login = () => {
               ← Back to home
             </Link>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };
