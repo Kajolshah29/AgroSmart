@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import { User, Home, Settings, LogOut, Edit, Check, Trash2 } from "lucide-react";
+import { User, Home, Settings, LogOut, Edit, Check, Trash2, MessageSquare } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import {
@@ -30,6 +30,7 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import { states, districts, talukas } from '@/src/data/locations';
+import ChatInterface from "../../components/ChatInterface";
 
 interface Product {
   _id: string;
@@ -107,6 +108,8 @@ const FarmerDashboard = () => {
     pendingRequests: 0,
     totalSales: 0
   });
+
+  const [showChat, setShowChat] = useState(false);
 
   // Calculate stats whenever products or orders change
   useEffect(() => {
@@ -443,42 +446,47 @@ const FarmerDashboard = () => {
       case "dashboard":
         return (
           <div className="space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid gap-4 md:grid-cols-3">
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-green-700">
-                    Total Products
-                  </CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Products</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {stats.totalProducts}
-                  </p>
+                  <div className="text-2xl font-bold">{stats.totalProducts}</div>
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-amber-700">
-                    Pending Requests
-                  </CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Pending Requests</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold text-gray-900">
-                    {stats.pendingRequests}
-                  </p>
+                  <div className="text-2xl font-bold">{stats.pendingRequests}</div>
                 </CardContent>
               </Card>
               <Card>
-                <CardHeader>
-                  <CardTitle className="text-blue-700">Total Sales</CardTitle>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Sales</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-3xl font-bold text-gray-900">
-                    ${stats.totalSales.toFixed(2)}
-                  </p>
+                  <div className="text-2xl font-bold">₹{stats.totalSales}</div>
                 </CardContent>
               </Card>
             </div>
+
+            <div className="flex justify-end">
+              <Button
+                onClick={() => setShowChat(!showChat)}
+                className="bg-blue-500 hover:bg-blue-600"
+              >
+                {showChat ? 'Hide Chat' : 'Show Chat'}
+              </Button>
+            </div>
+
+            {showChat && (
+              <div className="mt-4">
+                <ChatInterface />
+              </div>
+            )}
 
             <Card>
               <CardHeader>
@@ -948,6 +956,14 @@ const FarmerDashboard = () => {
               <Edit className="w-4 h-4 mr-2" />
               Transactions
             </Button>
+            <Button
+              variant={showChat ? "secondary" : "ghost"}
+              className="w-full justify-start"
+              onClick={() => setShowChat(!showChat)}
+            >
+              <MessageSquare className="w-4 h-4 mr-2" />
+              AI Assistant
+            </Button>
             <Link href="/profile?type=farmer">
               <Button variant="ghost" className="w-full justify-start">
                 <User className="w-4 h-4 mr-2" />
@@ -967,7 +983,23 @@ const FarmerDashboard = () => {
 
         {/* Main Content */}
         <div className="flex-1">
-          {renderDashboardContent()}
+          {showChat ? (
+            <div className="space-y-6">
+              <div className="flex justify-between items-center">
+                <h2 className="text-2xl font-semibold">AI Farming Assistant</h2>
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowChat(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  Back to Dashboard
+                </Button>
+              </div>
+              <ChatInterface />
+            </div>
+          ) : (
+            renderDashboardContent()
+          )}
         </div>
       </div>
     </div>
