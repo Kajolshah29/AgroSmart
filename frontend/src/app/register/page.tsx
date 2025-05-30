@@ -41,7 +41,24 @@ const Register = () => {
     }
   });
 
-  const [errors, setErrors] = useState({
+  const [errors, setErrors] = useState<{
+    name: string;
+    email: string;
+    password: string;
+    confirmPassword: string;
+    phone: string;
+    address: string;
+    farmDetails: {
+      farmName: string;
+      farmSize: string;
+      farmLocation: string;
+    };
+    businessDetails: {
+      businessName: string;
+      businessType: string;
+      businessLocation: string;
+    };
+  }>({
     name: "",
     email: "",
     password: "",
@@ -291,20 +308,22 @@ const Register = () => {
     }
 
     // Clear error when user starts typing
-    const fieldName = name.includes('.') ? name.split('.')[1] : name; // Handle nested errors
-     if (errors[fieldName as keyof typeof errors] || (name.includes('.') && errors[name.split('.')[0] as keyof typeof errors]?.[fieldName as keyof typeof errors[keyof typeof errors]])) {
-        setErrors(prev => {
-            const newErrors = { ...prev };
-            if (name.includes('.')) {
-                 const [parent, child] = name.split('.');
-                 if (newErrors[parent as 'farmDetails' | 'businessDetails']) {
-                     newErrors[parent as 'farmDetails' | 'businessDetails'] = { ...newErrors[parent as 'farmDetails' | 'businessDetails'], [child]: "" };
-                 }
-            } else {
-                newErrors[name as keyof typeof newErrors] = "";
-            }
-            return newErrors;
-        });
+    const fieldName = name.includes('.') ? name.split('.')[1] : name;
+    if (errors[fieldName as keyof typeof errors] || (name.includes('.') && errors[name.split('.')[0] as keyof typeof errors]?.[fieldName as keyof typeof errors[keyof typeof errors]])) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        if (name.includes('.')) {
+          const [parent, child] = name.split('.');
+          if (parent === 'farmDetails') {
+            newErrors.farmDetails = { ...newErrors.farmDetails, [child]: "" };
+          } else if (parent === 'businessDetails') {
+            newErrors.businessDetails = { ...newErrors.businessDetails, [child]: "" };
+          }
+        } else {
+          (newErrors as any)[name] = "";
+        }
+        return newErrors;
+      });
     }
   };
 
