@@ -125,8 +125,5 @@ AgroSmart/
 * Polygon Mumbai Testnet for blockchain transactions *(Once Deployed)*.
 * Rasa NLU can be tested using `/model/parse` endpoint.
 
-
-## 📨 Contact
-
 * Team AgroSmart
-* [LinkedIn](#) | [Email](mailto:team@AgroSmart.in) | [Website](#)
+  
