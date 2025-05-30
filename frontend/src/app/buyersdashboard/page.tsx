@@ -10,7 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { User, Home, Settings, LogOut, Search, Check, ShoppingBag, ShoppingCart, Store, MapPin } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
-import { useCart, CartProvider } from "@/src/context/CartContext";
+import { useCart, CartProvider } from "../../context/CartContext";
 import Cart from "@/src/components/Cart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { states, districts, talukas } from "@/src/data/locations";

@@ -912,7 +912,7 @@ const FarmerDashboard = () => {
         <div className="w-full md:w-64 md:pr-8 mb-8 md:mb-0">
           <div className="flex items-center justify-between mb-6">
             <Link href="/" className="text-2xl font-bold text-gray-900">
-              Agri<span className="text-green-600">Chain</span>
+              Agro<span className="text-green-600">Smart</span>
             </Link>
           </div>
           <nav className="space-y-2">

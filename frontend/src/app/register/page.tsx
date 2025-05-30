@@ -313,7 +313,7 @@ const Register = () => {
        <Card className="max-w-md w-full mx-4">
         <CardHeader className="text-center">
           <Link href="/" className="text-2xl font-bold text-gray-900">
-            Agri<span className="text-green-600">Chain</span>
+            Agro<span className="text-green-600">Smart</span>
           </Link>
           <CardTitle className="mt-6 text-2xl">
             Join as {userType === "farmer" ? "Farmer" : "Buyer"}
