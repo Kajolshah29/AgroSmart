@@ -1,116 +1,167 @@
-# AgroSmart Platform
+# 🌾 AgriSmart
 
-A modern agricultural marketplace platform connecting farmers and buyers.
+> **Empowering Rural Farmers through Technology and Trust**
 
-## Project Structure
+AgriSmart is a farmer-first digital agri-marketplace that connects rural farmers directly to buyers using secure UPI payments and blockchain-backed transaction logs — without the complexity of crypto wallets. Our platform features a multilingual AI chatbot and geo-tagged farm mapping to ensure accessibility and transparency for rural India.
 
+---
+
+## 🚀 Features
+
+* 🤝 Direct farmer-to-buyer connection via UPI
+* 🔐 Blockchain-backed escrow for secure payments
+* 🗣 Multilingual AI Chatbot (Hindi, Hinglish, Gujarati, English)
+* 🗺 Geo-tagging of farms with Leaflet.js
+* ✅ No crypto wallets — simple, trust-based system
+* 📜 Transparent transaction logs on Polygon testnet
+
+---
+
+## 📺 Tech Stack
+
+| Layer      | Technology                                         |
+| ---------- | -------------------------------------------------- |
+| Frontend   | Next.js (TypeScript), Tailwind CSS                 |
+| Backend    | Node.js, Express.js                                |
+| Database   | MongoDB                                            |
+| AI / NLP   | Rasa NLU + BERT (multilingual support)             |
+| Payments   | Razorpay UPI Integration (Sandbox)                 |
+| Mapping    | Leaflet.js                                         |
+| Blockchain | Solidity Smart Contracts on Polygon Mumbai Testnet |
+
+---
+
+## 🏦 Project Structure
+
+```bash
+AgriSmart/
+├── frontend/             # Next.js Frontend
+├── backend/              # Express.js Backend API
+├── blockchain/            # Solidity Smart Contracts
+├── rasa-bot/             # Rasa NLU AI Chatbot
+└── README.md             # This file
 ```
-agrosmart/
-├── frontend/               # Next.js frontend application
-│   ├── src/
-│   │   ├── app/           # Next.js app router pages
-│   │   ├── components/    # Reusable UI components
-│   │   ├── context/       # React context providers
-│   │   ├── data/         # Static data and constants
-│   │   └── lib/          # Utility functions and helpers
-│   ├── public/           # Static assets
-│   └── package.json      # Frontend dependencies
-│
-├── backend/              # Express.js backend application
-│   ├── config/          # Configuration files
-│   ├── middleware/      # Express middleware
-│   ├── models/          # Mongoose models
-│   ├── routes/          # API routes
-│   ├── uploads/         # File uploads directory
-│   └── package.json     # Backend dependencies
-│
-└── README.md            # Project documentation
-```
 
-## Features
+---
 
-- User authentication (Farmers and Buyers)
-- Profile management
-- Product listing and management
-- Real-time messaging
-- Location-based search
-- File uploads for product images
-
-## Tech Stack
-
-### Frontend
-- Next.js 14
-- TypeScript
-- Tailwind CSS
-- React Context for state management
-- Axios for API calls
-
-### Backend
-- Node.js
-- Express.js
-- MongoDB with Mongoose
-- JWT for authentication
-- Multer for file uploads
-- Bcrypt for password hashing
-
-## Getting Started
+## ⚙️ Installation
 
 ### Prerequisites
-- Node.js (v18 or higher)
-- MongoDB
-- npm or yarn
 
-### Installation
+* Node.js (v18+)
+* MongoDB (Atlas / Local)
+* Razorpay Account (Sandbox Key)
+* Polygon Mumbai Faucet account (for Testnet Ether)
+* Python 3.8+ (for Rasa NLU)
 
-1. Clone the repository:
+### Setup Instructions
+
+1. **Clone the repository**
+
+   ```bash
+   git clone https://github.com/Kajolshah29/AgroSmart.git
+   cd AgroSmart
+   ```
+
+2. **Frontend Setup**
+
+   ```bash
+   cd frontend
+   npm install
+   npm run dev
+   ```
+
+3. **Backend Setup**
+
+   ```bash
+   cd backend
+   npm install
+   npm run dev
+   ```
+
+4. **Rasa Chatbot Setup**
+
+   ```bash
+   cd rasa-bot
+   pip install -r requirements.txt
+   rasa train
+   rasa run --enable-api --cors "*"
+   ```
+
+5. **Smart Contract Deployment**
+
+   * Deploy using Hardhat or Truffle to Mumbai Testnet.
+   * Update `CONTRACT_ADDRESS` in the backend `.env`.
+
+6. **Environment Variables**
+
+   Create a `.env` file in `/backend`:
+
+   ```env
+   MONGO_URI=your_mongo_uri_here
+   RAZORPAY_KEY_ID=your_razorpay_key_id
+   RAZORPAY_KEY_SECRET=your_razorpay_secret
+   CONTRACT_ADDRESS=your_deployed_contract_address
+   MUMBAI_RPC_URL=your_mumbai_rpc_url
+   PRIVATE_KEY=your_wallet_private_key
+   ```
+
+---
+
+## 💻 Usage
+
+* Open `http://localhost:3000` for the frontend.
+* Chatbot auto-starts on the homepage for farmer queries.
+* Payment escrow via Razorpay Sandbox.
+* Delivery confirmation triggers payment release via backend and logs it to blockchain.
+
+---
+
+## 🥮 Testing
+
+* Use Razorpay UPI sandbox apps for fake UPI IDs.
+* Polygon Mumbai Testnet for blockchain transactions.
+* Rasa NLU can be tested using `/model/parse` endpoint.
+
+---
+
+## 🖼️ Screenshots
+
+|     Home Interface     |        Payment Sandbox       |           Blockchain Logs          |          AI Chatbot          |       Map View       |
+| :--------------------: | :--------------------------: | :--------------------------------: | :--------------------------: | :------------------: |
+| ![Home](docs/home.png) | ![Payment](docs/payment.png) | ![Blockchain](docs/blockchain.png) | ![Chatbot](docs/chatbot.png) | ![Map](docs/map.png) |
+
+---
+
+## 📈 Roadmap
+
+* [ ] Production Razorpay UPI integration
+* [ ] Offline Chatbot Support (Voice)
+* [ ] Expand to Dairy/Fisheries sectors
+* [ ] Integration with Govt. eNAM platform
+* [ ] Deploy on Vercel / AWS
+
+---
+
+## 🤝 Contributing
+
+Contributions, issues and feature requests are welcome!
+
 ```bash
-git clone https://github.com/yourusername/agrosmart.git
-cd agrosmart
+Fork > Clone > Commit > Push > Pull Request
 ```
 
-2. Install frontend dependencies:
-```bash
-cd frontend
-npm install
-```
+Please check [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
-3. Install backend dependencies:
-```bash
-cd ../backend
-npm install
-```
+---
 
-4. Create a `.env` file in the backend directory:
-```
-MONGODB_URI=your_mongodb_uri
-JWT_SECRET=your_jwt_secret
-PORT=5000
-```
+## 📜 License
 
-5. Start the development servers:
+[MIT](LICENSE)
 
-Frontend:
-```bash
-cd frontend
-npm run dev
-```
+---
 
-Backend:
-```bash
-cd backend
-npm run dev
-```
+## 📨 Contact
 
-The frontend will be available at `http://localhost:3000` and the backend at `http://localhost:5000`.
-
-## Contributing
-
-1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details. 
+* Team AgriSmart
+* [LinkedIn](#) | [Email](mailto:team@agrismart.in) | [Website](#)
