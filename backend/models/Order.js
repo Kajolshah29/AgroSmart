@@ -1,29 +1,22 @@
 const mongoose = require('mongoose');
 
 const orderSchema = new mongoose.Schema({
-    buyerId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'User',
-        required: true
-    },
     items: [{
         productId: {
             type: mongoose.Schema.Types.ObjectId,
             ref: 'Product',
             required: true
         },
-        quantity: {
-            type: Number,
-            required: true,
-            min: 1
+        name: {
+            type: String,
+            required: true
         },
-        price: {
+        quantity: {
             type: Number,
             required: true
         },
-        farmerId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+        price: {
+            type: Number,
             required: true
         }
     }],
@@ -31,35 +24,38 @@ const orderSchema = new mongoose.Schema({
         type: Number,
         required: true
     },
-    paymentMethod: {
-        type: String,
-        enum: ['upi', 'card', 'cod'],
-        required: true
-    },
-    paymentDetails: {
-        type: mongoose.Schema.Types.Mixed,
-        required: function() {
-            return this.paymentMethod === 'card';
+    buyerDetails: {
+        name: {
+            type: String,
+            required: true
+        },
+        email: {
+            type: String,
+            required: true
+        },
+        phone: {
+            type: String,
+            required: true
         }
+    },
+    sellerId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
     },
     status: {
         type: String,
-        enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+        enum: ['pending', 'accepted', 'rejected', 'completed'],
         default: 'pending'
     },
-    paymentStatus: {
-        type: String,
-        enum: ['pending', 'processing', 'completed', 'failed'],
-        default: 'pending'
+    paymentDetails: {
+        paymentId: String,
+        orderId: String
     },
-    deliveryAddress: {
-        street: String,
-        city: String,
-        state: String,
-        pincode: String
+    createdAt: {
+        type: Date,
+        default: Date.now
     }
-}, {
-    timestamps: true
 });
 
 // Update the updatedAt timestamp before saving

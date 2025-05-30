@@ -9,6 +9,7 @@ import { Label } from './ui/label';
 import { Minus, Plus, Trash2, X, Info, CreditCard, Wallet, Banknote, QrCode } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from './ui/dialog';
+import { loadRazorpay, initiatePayment } from '@/src/lib/razorpay';
 
 const DELIVERY_CHARGES = 50; // ₹50 delivery charges
 const GST_RATE = 0.18; // 18% GST
@@ -24,6 +25,7 @@ const Cart = () => {
     cvv: '',
     name: ''
   });
+  const [isLoading, setIsLoading] = useState(false);
 
   const subtotal = totalAmount;
   const gst = subtotal * GST_RATE;
@@ -32,23 +34,36 @@ const Cart = () => {
 
   const handleCheckout = async () => {
     try {
+      setIsLoading(true);
       const token = localStorage.getItem('token');
       if (!token) {
         toast.error('Please login to checkout');
         return;
       }
 
+      // Get user details from localStorage
+      const userDetails = JSON.parse(localStorage.getItem('user') || '{}');
+
+      // Create order data
       const orderData = {
         items: items.map(item => ({
           productId: item.id,
+          name: item.name,
           quantity: item.quantity,
-          price: item.price
+          price: item.price,
+          image: item.image
         })),
         totalAmount: total,
+        buyerDetails: {
+          name: userDetails.name,
+          email: userDetails.email,
+          phone: userDetails.phone
+        },
         paymentMethod,
-        paymentDetails: paymentMethod === 'card' ? cardDetails : undefined
+        status: 'pending'
       };
 
+      // Create order in backend
       const response = await fetch('http://localhost:5000/api/orders', {
         method: 'POST',
         headers: {
@@ -59,14 +74,72 @@ const Cart = () => {
       });
 
       if (!response.ok) {
-        throw new Error('Failed to create order');
+        const errorData = await response.json().catch(() => ({ message: 'Failed to create order' }));
+        throw new Error(errorData.message || 'Failed to create order');
+      }
+
+      const orderResult = await response.json();
+
+      // Process payment based on selected method
+      if (paymentMethod === 'card') {
+        try {
+          // Load Razorpay script
+          await loadRazorpay();
+
+          // Initiate Razorpay payment
+          const paymentResult = await initiatePayment(total * 100); // Convert to paise
+
+          if (!paymentResult.success) {
+            throw new Error('Payment failed');
+          }
+
+          // Update order with payment details
+          const paymentResponse = await fetch(`http://localhost:5000/api/orders/${orderResult.orderId}/payment`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              paymentId: paymentResult.paymentId,
+              orderId: paymentResult.orderId
+            })
+          });
+
+          if (!paymentResponse.ok) {
+            const errorData = await paymentResponse.json().catch(() => ({ message: 'Failed to update payment details' }));
+            throw new Error(errorData.message || 'Failed to update payment details');
+          }
+        } catch (error) {
+          console.error('Payment processing error:', error);
+          toast.error(error instanceof Error ? error.message : 'Payment processing failed');
+          return;
+        }
+      } else if (paymentMethod === 'cod') {
+        // For COD, just update the order status
+        const codResponse = await fetch(`http://localhost:5000/api/orders/${orderResult.orderId}/status`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ status: 'pending', paymentMethod: 'cod' })
+        });
+
+        if (!codResponse.ok) {
+          const errorData = await codResponse.json().catch(() => ({ message: 'Failed to update order status' }));
+          throw new Error(errorData.message || 'Failed to update order status');
+        }
       }
 
       toast.success('Order placed successfully!');
       clearCart();
       setShowCheckout(false);
     } catch (error) {
-      toast.error('Failed to place order');
+      console.error('Checkout failed:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to process payment');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -99,36 +172,50 @@ const Cart = () => {
           {items.map((item) => (
             <Card key={item.id}>
               <CardContent className="p-4">
-                <div className="flex items-center space-x-4">
-                  {item.image && (
-                    <img
-                      src={`http://localhost:5000/${item.image}`}
-                      alt={item.name}
-                      className="w-16 h-16 object-cover rounded-md"
-                    />
-                  )}
-                  <div className="flex-1">
-                    <h3 className="font-medium">{item.name}</h3>
-                    <p className="text-gray-500">₹{item.price}</p>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    {item.image && (
+                      <img
+                        src={`http://localhost:5000/${item.image}`}
+                        alt={item.name}
+                        className="w-16 h-16 object-cover rounded-md"
+                      />
+                    )}
+                    <div>
+                      <h3 className="font-medium">{item.name}</h3>
+                      <p className="text-gray-500">₹{item.price} per unit</p>
+                      <div className="flex items-center space-x-2 mt-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => updateQuantity(item.id, Math.max(1, item.quantity - 1))}
+                          className="h-8 w-8"
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <span className="w-8 text-center">{item.quantity}</span>
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                          className="h-8 w-8"
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                        <span className="ml-4 text-sm text-gray-600">
+                          Total: ₹{(item.price * item.quantity).toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setShowProductDetails(item.id)}
-                      className="text-blue-500 hover:text-blue-700"
-                    >
-                      <Info className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => removeFromCart(item.id)}
-                      className="text-red-500 hover:text-red-700"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeFromCart(item.id)}
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               </CardContent>
             </Card>
@@ -202,94 +289,105 @@ const Cart = () => {
 
       {/* Checkout Dialog */}
       <Dialog open={showCheckout} onOpenChange={setShowCheckout}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-2xl bg-white shadow-lg">
           <DialogHeader>
             <DialogTitle>Checkout</DialogTitle>
+            <DialogDescription>
+              Review your order and select a payment method
+            </DialogDescription>
           </DialogHeader>
-          
+
           <div className="space-y-6">
             {/* Order Summary */}
-            <div className="space-y-2">
-              <h3 className="font-semibold">Order Summary</h3>
-              <div className="space-y-1 text-sm">
-                <div className="flex justify-between">
-                  <span>Subtotal:</span>
-                  <span>₹{subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>GST (18%):</span>
-                  <span>₹{gst.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between">
-                  <span>Delivery:</span>
-                  <span>₹{deliveryFee.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between font-bold">
-                  <span>Total:</span>
-                  <span>₹{total.toFixed(2)}</span>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h3 className="font-semibold mb-3">Order Summary</h3>
+              <div className="space-y-2">
+                {items.map((item) => (
+                  <div key={item.id} className="flex justify-between text-sm">
+                    <span>{item.name} x {item.quantity}</span>
+                    <span>₹{item.price * item.quantity}</span>
+                  </div>
+                ))}
+                <div className="border-t pt-2 mt-2">
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal</span>
+                    <span>₹{subtotal.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>GST (18%)</span>
+                    <span>₹{gst.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Delivery Charges</span>
+                    <span>₹{deliveryFee.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between font-semibold text-lg pt-2 border-t">
+                    <span>Total Amount</span>
+                    <span>₹{total.toFixed(2)}</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Payment Methods */}
+            {/* Payment Method Selection */}
             <div className="space-y-4">
               <h3 className="font-semibold">Select Payment Method</h3>
               <div className="grid grid-cols-3 gap-4">
                 <Button
                   variant={paymentMethod === 'upi' ? 'default' : 'outline'}
-                  className="flex flex-col items-center p-4 h-auto"
+                  className={`flex flex-col items-center p-4 h-auto ${
+                    paymentMethod === 'upi' ? 'bg-green-600 hover:bg-green-700' : ''
+                  }`}
                   onClick={() => setPaymentMethod('upi')}
                 >
-                  <QrCode className="h-6 w-6 mb-2" />
-                  <span className="text-sm">UPI</span>
+                  <QrCode className="w-6 h-6 mb-2" />
+                  <span>UPI</span>
                 </Button>
                 <Button
                   variant={paymentMethod === 'card' ? 'default' : 'outline'}
-                  className="flex flex-col items-center p-4 h-auto"
+                  className={`flex flex-col items-center p-4 h-auto ${
+                    paymentMethod === 'card' ? 'bg-green-600 hover:bg-green-700' : ''
+                  }`}
                   onClick={() => setPaymentMethod('card')}
                 >
-                  <CreditCard className="h-6 w-6 mb-2" />
-                  <span className="text-sm">Card</span>
+                  <CreditCard className="w-6 h-6 mb-2" />
+                  <span>Card</span>
                 </Button>
                 <Button
                   variant={paymentMethod === 'cod' ? 'default' : 'outline'}
-                  className="flex flex-col items-center p-4 h-auto"
+                  className={`flex flex-col items-center p-4 h-auto ${
+                    paymentMethod === 'cod' ? 'bg-green-600 hover:bg-green-700' : ''
+                  }`}
                   onClick={() => setPaymentMethod('cod')}
                 >
-                  <Banknote className="h-6 w-6 mb-2" />
-                  <span className="text-sm">COD</span>
+                  <Wallet className="w-6 h-6 mb-2" />
+                  <span>Cash on Delivery</span>
                 </Button>
               </div>
             </div>
 
-            {/* Payment Details */}
-            {paymentMethod === 'upi' && (
-              <div className="space-y-4">
-                <div className="text-center">
-                  <img
-                    src="/images/upi-qr.png"
-                    alt="UPI QR Code"
-                    className="w-48 h-48 mx-auto"
-                  />
-                  <p className="text-sm text-gray-500 mt-2">
-                    Scan QR code to pay using any UPI app
-                  </p>
-                </div>
-              </div>
-            )}
-
+            {/* Card Details Form (shown only when card payment is selected) */}
             {paymentMethod === 'card' && (
               <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="cardNumber">Card Number</Label>
-                  <Input
-                    id="cardNumber"
-                    placeholder="1234 5678 9012 3456"
-                    value={cardDetails.cardNumber}
-                    onChange={(e) => setCardDetails({ ...cardDetails, cardNumber: e.target.value })}
-                  />
-                </div>
                 <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="cardNumber">Card Number</Label>
+                    <Input
+                      id="cardNumber"
+                      placeholder="1234 5678 9012 3456"
+                      value={cardDetails.cardNumber}
+                      onChange={(e) => setCardDetails({ ...cardDetails, cardNumber: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="name">Name on Card</Label>
+                    <Input
+                      id="name"
+                      placeholder="John Doe"
+                      value={cardDetails.name}
+                      onChange={(e) => setCardDetails({ ...cardDetails, name: e.target.value })}
+                    />
+                  </div>
                   <div className="space-y-2">
                     <Label htmlFor="expiryDate">Expiry Date</Label>
                     <Input
@@ -303,40 +401,32 @@ const Cart = () => {
                     <Label htmlFor="cvv">CVV</Label>
                     <Input
                       id="cvv"
-                      placeholder="123"
                       type="password"
-                      maxLength={3}
+                      placeholder="123"
                       value={cardDetails.cvv}
                       onChange={(e) => setCardDetails({ ...cardDetails, cvv: e.target.value })}
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="name">Name on Card</Label>
-                  <Input
-                    id="name"
-                    placeholder="John Doe"
-                    value={cardDetails.name}
-                    onChange={(e) => setCardDetails({ ...cardDetails, name: e.target.value })}
-                  />
-                </div>
               </div>
             )}
 
-            {paymentMethod === 'cod' && (
-              <div className="text-center p-4 bg-gray-50 rounded-lg">
-                <p className="text-gray-600">
-                  Pay ₹{total.toFixed(2)} in cash when your order arrives
-                </p>
-              </div>
-            )}
-
-            <Button
-              className="w-full bg-green-600 hover:bg-green-700"
-              onClick={handleCheckout}
-            >
-              Place Order
-            </Button>
+            {/* Payment Button */}
+            <div className="flex justify-end space-x-4">
+              <Button
+                variant="outline"
+                onClick={() => setShowCheckout(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleCheckout}
+                disabled={isLoading}
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {isLoading ? 'Processing...' : `Pay ₹${total.toFixed(2)}`}
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../../components/ui/ca
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../../components/ui/table";
-import { User, Home, Settings, LogOut, Search, Check, ShoppingBag, ShoppingCart, Store, MapPin } from "lucide-react";
+import { User, Home, Settings, LogOut, Search, Check, ShoppingBag, ShoppingCart, Store, MapPin, Minus, Plus } from "lucide-react";
 import { toast } from "react-hot-toast";
 import { useRouter } from "next/navigation";
 import { useCart, CartProvider } from "../../context/CartContext";
@@ -15,6 +15,7 @@ import Cart from "@/src/components/Cart";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/src/components/ui/select";
 import { states, districts, talukas } from "@/src/data/locations";
 import MapWrapper from '@/src/components/MapWrapper';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/src/components/ui/dialog";
 
 interface Product {
   _id: string;
@@ -83,6 +84,8 @@ const BuyerDashboard = () => {
   const { addToCart, totalItems } = useCart();
 
   const [showMap, setShowMap] = useState(false);
+  const [showProductDetails, setShowProductDetails] = useState<Product | null>(null);
+  const [selectedQuantity, setSelectedQuantity] = useState(1);
 
   const fetchProducts = async () => {
     try {
@@ -172,16 +175,19 @@ const BuyerDashboard = () => {
       return;
     }
     
-    const cartItem: CartItem = {
+    const cartItem = {
       id: product._id,
       name: product.name,
       price: product.price,
-      quantity: 1,
+      quantity: selectedQuantity,
       image: product.images[0],
       farmerAddress: product.farmerAddress
     };
+    
     addToCart(cartItem);
-    toast.success('Product added to cart');
+    setShowProductDetails(null);
+    setSelectedQuantity(1);
+    toast.success(`${product.name} added to cart!`);
   };
 
   const handleLogout = () => {
@@ -321,7 +327,7 @@ const BuyerDashboard = () => {
                             <div className="flex justify-between items-center">
                               <span className="text-lg font-bold">₹{product.price}</span>
                               <Button
-                                onClick={() => handleAddToCart(product)}
+                                onClick={() => setShowProductDetails(product)}
                                 className="bg-green-600 hover:bg-green-700"
                               >
                                 Add to Cart
@@ -483,7 +489,7 @@ const BuyerDashboard = () => {
                         </div>
                         <div className="mt-4 flex justify-between items-center">
                           <Button
-                            onClick={() => handleAddToCart(product)}
+                            onClick={() => setShowProductDetails(product)}
                             className="bg-green-600 hover:bg-green-700"
                           >
                             Add to Cart
@@ -509,6 +515,78 @@ const BuyerDashboard = () => {
             )}
           </div>
         </div>
+
+        {/* Product Details Dialog */}
+        <Dialog open={!!showProductDetails} onOpenChange={() => {
+          setShowProductDetails(null);
+          setSelectedQuantity(1);
+        }}>
+          <DialogContent className="max-w-2xl bg-white shadow-lg">
+            <DialogHeader>
+              <DialogTitle>Product Details</DialogTitle>
+            </DialogHeader>
+            {showProductDetails && (
+              <div className="grid grid-cols-2 gap-6">
+                <div>
+                  <img
+                    src={`http://localhost:5000/${showProductDetails.images[0]}`}
+                    alt={showProductDetails.name}
+                    className="w-full h-64 object-cover rounded-lg"
+                  />
+                </div>
+                <div className="space-y-4">
+                  <h3 className="text-xl font-semibold">{showProductDetails.name}</h3>
+                  <p className="text-gray-600">{showProductDetails.description}</p>
+                  <div className="space-y-2">
+                    <p className="text-lg font-bold">₹{showProductDetails.price}</p>
+                    <p className="text-sm text-gray-500">per {showProductDetails.unit}</p>
+                    <p className="text-sm text-gray-500">
+                      Location: {showProductDetails.taluka}, {showProductDetails.district}, {showProductDetails.state}
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Farmer: {showProductDetails.farmerName}
+                    </p>
+                    <div className="flex items-center space-x-4">
+                      <Label htmlFor="quantity">Quantity:</Label>
+                      <div className="flex items-center space-x-2">
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setSelectedQuantity(Math.max(1, selectedQuantity - 1))}
+                        >
+                          <Minus className="h-4 w-4" />
+                        </Button>
+                        <Input
+                          id="quantity"
+                          type="number"
+                          min="1"
+                          value={selectedQuantity}
+                          onChange={(e) => setSelectedQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-16 text-center"
+                        />
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => setSelectedQuantity(selectedQuantity + 1)}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="pt-4">
+                      <Button
+                        onClick={() => handleAddToCart(showProductDetails)}
+                        className="w-full bg-green-600 hover:bg-green-700"
+                      >
+                        Add to Cart - ₹{(showProductDetails.price * selectedQuantity).toFixed(2)}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </CartProvider>
   );

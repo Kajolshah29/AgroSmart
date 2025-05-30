@@ -5,6 +5,7 @@ const Farmer = require('../models/Farmer');
 const Buyer = require('../models/Buyer');
 const bcrypt = require('bcrypt');
 const axios = require('axios');
+const { auth } = require('../middleware/auth');
 
 // Register Farmer
 router.post('/register/farmer', async (req, res) => {
@@ -357,6 +358,19 @@ router.put('/update-profile', async (req, res) => {
             error: error.message 
         });
     }
+});
+
+// Verify token and return user role
+router.get('/verify', auth, async (req, res) => {
+  try {
+    res.json({
+      role: req.user.role,
+      userId: req.user._id
+    });
+  } catch (error) {
+    console.error('Error verifying token:', error);
+    res.status(401).json({ message: 'Invalid token' });
+  }
 });
 
 module.exports = router; 
