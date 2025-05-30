@@ -27,7 +27,7 @@ AgroSmart is a farmer-first digital agri-marketplace that connects rural farmers
 | AI / NLP   | Rasa NLU + BERT (multilingual support)                             |
 | Payments   | Razorpay UPI Integration (Sandbox) *(In Progress)*                 |
 | Mapping    | Leaflet.js                                                         |
-| Blockchain | Solidity Smart Contracts on Polygon Mumbai Testnet *(In Progress)* |
+| Blockchain | Solidity Smart Contracts on Sepolia Testnet *(In Progress)* |
 
 ---
 
