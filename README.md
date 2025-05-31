@@ -115,8 +115,8 @@ for clear view check Website Img folder
 
 ## 🥮 Testing
 
-* Use Razorpay UPI sandbox apps for fake UPI IDs *.
-* Sepolia Testnet for blockchain transactions *.
+* Use Razorpay UPI sandbox apps for fake UPI IDs.
+* Sepolia Testnet for blockchain transactions.
 
 ---
 
