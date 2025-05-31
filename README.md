@@ -42,6 +42,12 @@ AgroSmart/
 ```
 
 ---
+for clear view check Website Img folder
+<img width="2848" alt="Frame 1" src="https://github.com/user-attachments/assets/0e2e7412-5b30-4c98-a773-443ece8610a3" />
+<img width="4159" alt="Frame 3" src="https://github.com/user-attachments/assets/407c162b-b53c-4f08-8196-4a08804a466a" />
+<img width="4159" alt="Frame 3" src="https://github.com/user-attachments/assets/526e841f-d912-4fa2-9105-55f804ccf750" />
+<img width="4159" alt="Frame 3" src="https://github.com/user-attachments/assets/11309830-d840-471e-a0bd-520947c2d4bf" />
+
 
 ## ⚙️ Installation
 
