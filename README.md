@@ -121,4 +121,5 @@ for clear view check Website Img folder
 ---
 
 Team AgroSmart
-  
+- [Kajol Shah](https://github.com/Kajolshah29)
+- [Zinal Shah](https://github.com/zinal2004)  
